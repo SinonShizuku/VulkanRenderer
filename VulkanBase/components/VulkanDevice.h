@@ -6,10 +6,6 @@
 
 class VulkanDevice {
 public:
-    VulkanDevice(VulkanInstance* instance) {
-        this->instance = instance;
-    }
-
     // getter
     [[nodiscard]] VkDevice get_device() const {
         return device;
@@ -29,6 +25,10 @@ public:
 
     [[nodiscard]] VkPhysicalDeviceMemoryProperties get_physical_device_memory_properties() const {
         return physical_device_memory_properties;
+    }
+
+    [[nodiscard]] std::vector<VkPhysicalDevice> & get_available_physical_devices() {
+        return available_physical_devices;
     }
 
     [[nodiscard]] VkPhysicalDevice get_available_physical_device(uint32_t index) const {
@@ -75,6 +75,18 @@ public:
         this->device = device;
     }
 
+    void set_queue_family_index_graphics(uint32_t queue_family_index_graphics) {
+        this->queue_family_index_graphics = queue_family_index_graphics;
+    }
+
+    void set_queue_family_index_presentation(uint32_t queue_family_index_presentation) {
+        this->queue_family_index_presentation = queue_family_index_presentation;
+    }
+
+    void set_queue_family_index_compute(uint32_t queue_family_index_compute) {
+        this->queue_family_index_compute = queue_family_index_compute;
+    }
+
     void set_device_extensions(const std::vector<const char*>& extensionNames) {
         device_extensions = extensionNames;
     }
@@ -84,114 +96,6 @@ public:
     }
 
     void add_device_extension(const char *extension_name);
-
-    VkResult acquire_physical_devices() {
-        uint32_t device_count = 0;
-        if (VkResult result = vkEnumeratePhysicalDevices(instance->get_instance(), &device_count, nullptr); result != VK_SUCCESS) {
-            std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to get the count of physical devices!\nError code: {}\n", int32_t(result));
-            return result;
-        }
-        if (!device_count) {
-            std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to find any physical device supports vulkan!\n");
-            abort();
-        }
-        available_physical_devices.resize(device_count);
-        VkResult result = vkEnumeratePhysicalDevices(instance->get_instance(), &device_count, available_physical_devices.data());
-        if (result != VK_SUCCESS) {
-            std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to enumerate physical devices!\nError code: {}\n", int32_t(result));
-        }
-        return result;
-    }
-
-    VkResult get_queue_family_indices(VkPhysicalDevice physical_device, bool enable_graphics_queue,bool enable_compute_queue, uint32_t (&queue_family_indices)[3]) {
-        uint32_t queue_family_count = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
-        if (!queue_family_count) return VK_RESULT_MAX_ENUM;
-        std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
-        vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_family_properties.data());
-
-        auto&[ig,ip,ic] = queue_family_indices;
-        ig = ip = ic = VK_QUEUE_FAMILY_IGNORED;
-        for (uint32_t i = 0; i < queue_family_count; i++) {
-            // 这三个VkBool32变量指示是否可获取（指应该被获取且能获取）相应队列族索引
-            VkBool32
-                support_graphics = enable_graphics_queue && queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT,
-                support_presentation = false,
-                support_compute = enable_compute_queue && queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT;
-            // 只在创建了window surface时获取支持呈现的队列族的索引
-            if (instance->get_surface())
-                if (VkResult result = vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, instance->get_surface(), &support_presentation)) {
-                    std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to determine if the queue family supports presentation!\nError code: {}\n", int32_t(result));
-                    return result;
-                }
-            // 同时支持图形操作与计算
-            if (support_graphics && support_presentation) {
-                if (support_presentation) {
-                    ig = ip = ic = i;
-                    break;
-                }
-                if (ig != ic || ig == VK_QUEUE_FAMILY_IGNORED)
-                    ig = ic = i;
-                if (!instance->get_surface()) break;
-            }
-            // 若任何一个队列族索引可以被取得但尚未被取得，将其值覆写为i
-            if (support_graphics && ig == VK_QUEUE_FAMILY_IGNORED)
-                ig = i;
-            if (support_presentation && ip == VK_QUEUE_FAMILY_IGNORED)
-                ip = i;
-            if (support_compute && ic == VK_QUEUE_FAMILY_IGNORED)
-                ic = i;
-        }
-        // 若任何需要被取得的队列族索引尚未被取得，则函数执行失败
-        if (ig == VK_QUEUE_FAMILY_IGNORED && enable_graphics_queue ||
-            ip == VK_QUEUE_FAMILY_IGNORED && instance->get_surface()||
-            ic == VK_QUEUE_FAMILY_IGNORED && enable_compute_queue ) {
-            return VK_RESULT_MAX_ENUM;
-        }
-
-        // 成功
-        queue_family_index_graphics = ig;
-        queue_family_index_presentation = ip;
-        queue_family_index_compute = ic;
-        return VK_SUCCESS;
-    }
-
-    VkResult determine_physical_device(uint32_t device_index = 0, bool enable_graphics_queue = true, bool enable_compute_queue = true) {
-        static constexpr uint32_t  not_found = INT32_MAX;
-        struct queue_family_index_combination {
-            uint32_t graphics = VK_QUEUE_FAMILY_IGNORED;
-            uint32_t presentation = VK_QUEUE_FAMILY_IGNORED;
-            uint32_t compute = VK_QUEUE_FAMILY_IGNORED;
-        };
-        static std::vector<queue_family_index_combination> queue_family_index_combinations(available_physical_devices.size());
-        auto&[ig,ip,ic] = queue_family_index_combinations[device_index];
-
-        if (ig == not_found && enable_graphics_queue ||
-            ip == not_found && instance->get_surface()||
-            ic == not_found && enable_compute_queue ) {
-            return VK_RESULT_MAX_ENUM;
-        }
-
-        if (ig == VK_QUEUE_FAMILY_IGNORED && enable_graphics_queue ||
-            ip == VK_QUEUE_FAMILY_IGNORED && instance->get_surface()||
-            ic == VK_QUEUE_FAMILY_IGNORED && enable_compute_queue ) {
-            uint32_t indices[3];
-            VkResult result = get_queue_family_indices(available_physical_devices[device_index], enable_graphics_queue,enable_compute_queue, indices);
-            if (result == VK_SUCCESS || result == VK_RESULT_MAX_ENUM) {
-                if (enable_graphics_queue) ig = indices[0] & INT32_MAX;
-                if (instance->get_surface()) ip = indices[1] & INT32_MAX;
-                if (enable_compute_queue) ic = indices[2] & INT32_MAX;
-            }
-            if (result) return result;
-        }
-        else {
-            queue_family_index_graphics = enable_graphics_queue?ig:VK_QUEUE_FAMILY_IGNORED;
-            queue_family_index_presentation = instance->get_surface()?ip:VK_QUEUE_FAMILY_IGNORED;
-            queue_family_index_compute = enable_compute_queue?ic:VK_QUEUE_FAMILY_IGNORED;
-        }
-        physical_device = available_physical_devices[device_index];
-        return VK_SUCCESS;
-    }
 
     VkResult create_device(VkDeviceCreateFlags flags = 0) {
         float queue_priority = 1.0f;
@@ -293,7 +197,6 @@ public:
 
 
 private:
-    VulkanInstance *instance;
 
     VkPhysicalDevice physical_device{};
     VkPhysicalDeviceProperties physical_device_properties{};

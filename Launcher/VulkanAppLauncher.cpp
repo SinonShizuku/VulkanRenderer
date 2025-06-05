@@ -70,13 +70,13 @@ bool VulkanAppLauncher::init_vulkan() {
     VulkanCore::get_singleton().get_vulkan_instance().set_surface(surface);
 
     // 配置Vulkan设备
-    if (VulkanCore::get_singleton().get_vulkan_device().acquire_physical_devices() ||
-        VulkanCore::get_singleton().get_vulkan_device().determine_physical_device(0,true,false) ||
+    if (VulkanCore::get_singleton().acquire_physical_devices() ||
+        VulkanCore::get_singleton().determine_physical_device(0,true,false) ||
         VulkanCore::get_singleton().get_vulkan_device().create_device())
         return false;
 
     // 创建交换链
-    if (VulkanCore::get_singleton().get_vulkan_swapchain().create_swapchain())
+    if (VulkanCore::get_singleton().create_swapchain())
         return false;
 
     return true;

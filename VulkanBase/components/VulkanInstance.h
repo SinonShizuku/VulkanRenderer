@@ -23,7 +23,7 @@ public:
         return instance_extensions;
     }
 
-    [[nodiscard]] VkSurfaceKHR get_surface() const {
+    [[nodiscard]] VkSurfaceKHR &get_surface() {
         return surface;
     }
 
@@ -42,7 +42,7 @@ public:
     }
 
     void set_surface(VkSurfaceKHR surface) {
-        if (!this->surface) this->surface = surface;
+        this->surface = surface;
     }
 
     void set_instance(VkInstance instance) {
