@@ -27,6 +27,10 @@ public:
         return surface;
     }
 
+    [[nodiscard]] VkDebugUtilsMessengerEXT get_debug_messenger() const {
+        return debug_messenger;
+    }
+
 
     // setter
     void set_instance_layers(const std::vector<const char *> &instance_layers) {
@@ -39,6 +43,14 @@ public:
 
     void set_surface(VkSurfaceKHR surface) {
         if (!this->surface) this->surface = surface;
+    }
+
+    void set_instance(VkInstance instance) {
+        this->instance = instance;
+    }
+
+    void set_debug_messenger(VkDebugUtilsMessengerEXT debug_messenger) {
+        this->debug_messenger = debug_messenger;
     }
 
 

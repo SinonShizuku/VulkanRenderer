@@ -63,8 +63,24 @@ public:
         return queue_compute;
     }
 
+    [[nodiscard]] std::vector<void(*)()> & get_callbacks_create_device() {
+        return callbacks_create_device;
+    }
+
+    [[nodiscard]] std::vector<void(*)()> & get_callbacks_destroy_device() {
+        return callbacks_destroy_device;
+    }
+
+    void set_device(VkDevice device) {
+        this->device = device;
+    }
+
     void set_device_extensions(const std::vector<const char*>& extensionNames) {
         device_extensions = extensionNames;
+    }
+
+    void set_physical_device(VkPhysicalDevice physical_device) {
+        this->physical_device = physical_device;
     }
 
     void add_device_extension(const char *extension_name);
@@ -72,17 +88,17 @@ public:
     VkResult acquire_physical_devices() {
         uint32_t device_count = 0;
         if (VkResult result = vkEnumeratePhysicalDevices(instance->get_instance(), &device_count, nullptr); result != VK_SUCCESS) {
-            std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get the count of physical devices!\nError code: {}\n", int32_t(result));
+            std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to get the count of physical devices!\nError code: {}\n", int32_t(result));
             return result;
         }
         if (!device_count) {
-            std::cout << std::format("[ graphicsBase ] ERROR\nFailed to find any physical device supports vulkan!\n");
+            std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to find any physical device supports vulkan!\n");
             abort();
         }
         available_physical_devices.resize(device_count);
         VkResult result = vkEnumeratePhysicalDevices(instance->get_instance(), &device_count, available_physical_devices.data());
         if (result != VK_SUCCESS) {
-            std::cout << std::format("[ graphicsBase ] ERROR\nFailed to enumerate physical devices!\nError code: {}\n", int32_t(result));
+            std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to enumerate physical devices!\nError code: {}\n", int32_t(result));
         }
         return result;
     }
@@ -105,7 +121,7 @@ public:
             // 只在创建了window surface时获取支持呈现的队列族的索引
             if (instance->get_surface())
                 if (VkResult result = vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, instance->get_surface(), &support_presentation)) {
-                    std::cout << std::format("[ graphicsBase ] ERROR\nFailed to determine if the queue family supports presentation!\nError code: {}\n", int32_t(result));
+                    std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to determine if the queue family supports presentation!\nError code: {}\n", int32_t(result));
                     return result;
                 }
             // 同时支持图形操作与计算
@@ -216,7 +232,7 @@ public:
             .pEnabledFeatures = &physical_device_features
         };
         if (VkResult result = vkCreateDevice(physical_device, &device_create_info, nullptr, &device);result!=VK_SUCCESS) {
-            std::cout << std::format("[ graphicsBase ] ERROR\nFailed to create a vulkan logical device!\nError code: {}\n", int32_t(result));
+            std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to create a vulkan logical device!\nError code: {}\n", int32_t(result));
             return result;
         }
         if (queue_family_index_graphics!=VK_QUEUE_FAMILY_IGNORED)
@@ -229,7 +245,8 @@ public:
         vkGetPhysicalDeviceMemoryProperties(physical_device,&physical_device_memory_properties);
         // 输出所用的物理设备名称
         std::cout << std::format("Renderer: {}\n", physical_device_properties.deviceName);
-        // to be continued
+        for (auto& i : callbacks_create_device)
+            i();
         return VK_SUCCESS;
     }
 
@@ -239,14 +256,14 @@ public:
         std::vector<VkExtensionProperties> available_extensions;
         if (VkResult result = vkEnumerateDeviceExtensionProperties(physical_device, layer_name, &extension_count, nullptr)) {
             layer_name ?
-                std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get the count of device extensions!\nLayer name:{}\n", layer_name) :
-                std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get the count of device extensions!\n");
+                std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to get the count of device extensions!\nLayer name:{}\n", layer_name) :
+                std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to get the count of device extensions!\n");
             return result;
         }
         if (extension_count) {
             available_extensions.resize(extension_count);
             if (VkResult result = vkEnumerateDeviceExtensionProperties(physical_device, layer_name, &extension_count, available_extensions.data())) {
-                std::cout << std::format("[ graphicsBase ] ERROR\nFailed to enumerate device extension properties!\nError code: {}\n", int32_t(result));
+                std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to enumerate device extension properties!\nError code: {}\n", int32_t(result));
                 return result;
             }
             for (auto& i : extensions_to_check) {
@@ -266,9 +283,17 @@ public:
         return VK_SUCCESS;
     }
 
+    void add_callback_create_device(void(*function)()) {
+        callbacks_create_device.push_back(function);
+    }
+
+    void add_callback_destory_device(void(*function)()) {
+        callbacks_destroy_device.push_back(function);
+    }
+
+
 private:
     VulkanInstance *instance;
-    VkSurfaceKHR *surface;
 
     VkPhysicalDevice physical_device{};
     VkPhysicalDeviceProperties physical_device_properties{};
@@ -285,6 +310,8 @@ private:
     VkDevice device;
     std::vector<const char*> device_extensions;
 
+    std::vector<void(*)()> callbacks_create_device;
+    std::vector<void(*)()> callbacks_destroy_device;
+
+
 };
-
-

@@ -1,5 +1,5 @@
 #include "VulkanAppLauncher.h"
-#include "VulkanBase/VulkanCore.h"
+#include "../VulkanBase/VulkanCore.h"
 
 VulkanAppLauncher* VulkanAppLauncher::singleton = nullptr;
 
@@ -45,7 +45,7 @@ bool VulkanAppLauncher::init_vulkan() {
     uint32_t extension_count = 0;
     const char** extension_names = glfwGetRequiredInstanceExtensions(&extension_count);
     if (!extension_names) {
-        std::cout<< std::format("[ InitializeWindow ] ERROR\nFailed to get required extensions, Vulkan is not available on this machine!\n");
+        std::cout<< std::format("[ InitializeVulkan ] ERROR\nFailed to get required extensions, Vulkan is not available on this machine!\n");
         glfwTerminate();
         return false;
     }
@@ -75,7 +75,9 @@ bool VulkanAppLauncher::init_vulkan() {
         VulkanCore::get_singleton().get_vulkan_device().create_device())
         return false;
 
-    // To be continued
+    // 创建交换链
+    if (VulkanCore::get_singleton().get_vulkan_swapchain().create_swapchain())
+        return false;
 
     return true;
 }
@@ -108,7 +110,12 @@ void VulkanAppLauncher::main_loop() {
     title_fps();
 }
 
+void VulkanAppLauncher::cleanup() {
+    VulkanCore::get_singleton().~VulkanCore();
+}
+
 void VulkanAppLauncher::terminate_window() {
+    cleanup();
     glfwTerminate();
 }
 

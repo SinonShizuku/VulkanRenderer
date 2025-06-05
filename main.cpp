@@ -1,8 +1,6 @@
-#include "VulkanAppLauncher.h"
+#include "Launcher/VulkanAppLauncher.h"
 
 int main() {
-    VkExtent2D window_size = { 1920, 1080 };
-    VulkanAppLauncher::getSingleton(window_size).run();
-
+    VulkanAppLauncher::getSingleton(default_window_size).run();
     return 0;
 }
