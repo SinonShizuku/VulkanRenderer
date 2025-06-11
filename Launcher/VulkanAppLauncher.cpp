@@ -27,11 +27,11 @@ VulkanAppLauncher::~VulkanAppLauncher() {
 
 void VulkanAppLauncher::run() {
     if (!init_window()) {
-        std::cout << std::format("[ InitializeWindow ] ERROR\nFailed to initialize window!\n");
+        outstream << std::format("[ InitializeWindow ] ERROR\nFailed to initialize window!\n");
         return;
     }
     if (!init_vulkan()) {
-        std::cout << std::format("[ InitializeWindow ] ERROR\nFailed to initialize window!\n");
+        outstream << std::format("[ InitializeWindow ] ERROR\nFailed to initialize window!\n");
         return;
     }
     while (!glfwWindowShouldClose(window)) {
@@ -45,7 +45,7 @@ bool VulkanAppLauncher::init_vulkan() {
     uint32_t extension_count = 0;
     const char** extension_names = glfwGetRequiredInstanceExtensions(&extension_count);
     if (!extension_names) {
-        std::cout<< std::format("[ InitializeVulkan ] ERROR\nFailed to get required extensions, Vulkan is not available on this machine!\n");
+        outstream << std::format("[ InitializeVulkan ] ERROR\nFailed to get required extensions, Vulkan is not available on this machine!\n");
         glfwTerminate();
         return false;
     }
@@ -62,8 +62,9 @@ bool VulkanAppLauncher::init_vulkan() {
 
     // 配置surface
     VkSurfaceKHR surface = VK_NULL_HANDLE;
+
     if (VkResult result = glfwCreateWindowSurface(VulkanCore::get_singleton().get_vulkan_instance().get_instance(),window,nullptr,&surface)) {
-        std::cout << std::format("[ InitializeWindow ] ERROR\nFailed to create a window surface!\nError code: {}\n", int32_t(result));
+        outstream << std::format("[ InitializeWindow ] ERROR\nFailed to create a window surface!\nError code: {}\n", int32_t(result));
         glfwTerminate();
         return false;
     }
@@ -84,7 +85,7 @@ bool VulkanAppLauncher::init_vulkan() {
 
 bool VulkanAppLauncher::init_window() {
     if (!glfwInit()) {
-        std::cout << std::format("[ InitializeWindow ] ERROR\nFailed to initialize GLFW!\n");
+        outstream << std::format("[ InitializeWindow ] ERROR\nFailed to initialize GLFW!\n");
         return false;
     }
     // Vulkan格式
@@ -98,7 +99,7 @@ bool VulkanAppLauncher::init_window() {
         glfwCreateWindow(mode->width, mode->height,window_title,monitor,nullptr) :
         glfwCreateWindow(window_width, window_height,window_title,nullptr,nullptr);
     if (!window) {
-        std::cout << std::format("[ InitializeWindow ]\nFailed to create a glfw window!\n");
+        outstream << std::format("[ InitializeWindow ]\nFailed to create a glfw window!\n");
         glfwTerminate();
         return false;
     }

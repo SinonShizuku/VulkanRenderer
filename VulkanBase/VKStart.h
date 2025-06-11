@@ -1,5 +1,5 @@
 #pragma once
-//可能会用上的C++标准库
+// includes
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -39,5 +39,29 @@
 #endif
 #include <vulkan/vulkan.h>
 
-// global config
+
+
+// global defines
+#ifndef NDEBUG
+#define ENABLE_DEBUG_MESSENGER true
+#else
+#define ENABLE_DEBUG_MESSENGER false
+#endif
+
+// 封装Vulkan相关类的一些函数
+#define DestroyHandleBy(Func) if (handle) { Func(graphicsBase::Base().Device(), handle, nullptr); handle = VK_NULL_HANDLE; }
+#define MoveHandle handle = other.handle; other.handle = VK_NULL_HANDLE;
+#define DefineMoveAssignmentOperator(type) type& operator=(type&& other) { this->~type(); MoveHandle; return *this; }
+#define DefineHandleTypeOperator operator decltype(handle)() const { return handle; }
+#define DefineAddressFunction const decltype(handle)* Address() const { return &handle; }
+
+// 分割（函数块内）部分执行
+#define ExecuteOnce(...) { static bool executed = false; if (executed) return __VA_ARGS__; executed = true; }
+
+
+
+// global configs
 constexpr VkExtent2D default_window_size = { 1920, 1080 };
+
+// 输出方式
+inline auto& outstream = std::cout;//不是constexpr，因为std::cout具有外部链接

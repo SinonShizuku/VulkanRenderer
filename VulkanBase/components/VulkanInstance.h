@@ -59,10 +59,9 @@ public:
     void add_instance_extension(const char *extensionName);
 
     VkResult create_instance(VkInstanceCreateFlags flags = 0) {
-#ifndef NDEBUG
-        add_instance_layer("VK_LAYER_KHRONOS_validation");
-        add_instance_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-#endif
+        if constexpr (ENABLE_DEBUG_MESSENGER)
+            add_instance_layer("VK_LAYER_KHRONOS_validation"),
+            add_instance_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         VkApplicationInfo app_info{
             .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
             .apiVersion = api_version
@@ -77,17 +76,16 @@ public:
             .ppEnabledExtensionNames = instance_extensions.data()
         };
         if (VkResult result = vkCreateInstance(&instance_info, nullptr, &instance); result != VK_SUCCESS) {
-            std::cout << std::format("[ VulkanInstanceModule ] ERROR\nFailed to create a vulkan instance!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanInstanceModule ] ERROR\nFailed to create a vulkan instance!\nError code: {}\n", int32_t(result));
             return result;
         }
-        std::cout << std::format(
+        outstream << std::format(
         "Vulkan API Version: {}.{}.{}\n",
         VK_VERSION_MAJOR(api_version),
         VK_VERSION_MINOR(api_version),
         VK_VERSION_PATCH(api_version));
-#ifndef NDEBUG
-        create_debug_messenger();
-#endif
+        if constexpr (ENABLE_DEBUG_MESSENGER)
+            create_debug_messenger();
         return VK_SUCCESS;
     }
 
@@ -95,13 +93,13 @@ public:
         uint32_t layer_count = 0;
         std::vector<VkLayerProperties> available_layers;
         if (VkResult result = vkEnumerateInstanceLayerProperties(&layer_count, nullptr); result != VK_SUCCESS) {
-            std::cout << std::format("[ VulkanInstanceModule ] ERROR\nFailed to get the count of instance layers!\n");
+            outstream << std::format("[ VulkanInstanceModule ] ERROR\nFailed to get the count of instance layers!\n");
             return result;
         }
         if (layer_count) {
             available_layers.resize(layer_count);
             if (VkResult result = vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data()); result != VK_SUCCESS) {
-                std::cout << std::format("[ VulkanInstanceModule ] ERROR\nFailed to enumerate instance layer properties!\nError code: {}\n", int32_t(result));
+                outstream << std::format("[ VulkanInstanceModule ] ERROR\nFailed to enumerate instance layer properties!\nError code: {}\n", int32_t(result));
                 return result;
             }
             for (auto& i : layers_to_check) {
@@ -129,14 +127,14 @@ public:
         std::vector<VkExtensionProperties> available_extensions;
         if (VkResult result = vkEnumerateInstanceExtensionProperties(layer_name, &extension_count, nullptr); result != VK_SUCCESS) {
             layer_name?
-            std::cout << std::format("[ VulkanInstanceModule ] ERROR\nFailed to get the count of instance extensions!\nLayer name:{}\n", layer_name) :
-            std::cout << std::format("[ VulkanInstanceModule ] ERROR\nFailed to get the count of instance extensions!\n");
+            outstream << std::format("[ VulkanInstanceModule ] ERROR\nFailed to get the count of instance extensions!\nLayer name:{}\n", layer_name) :
+            outstream << std::format("[ VulkanInstanceModule ] ERROR\nFailed to get the count of instance extensions!\n");
             return result;
         }
         if (extension_count) {
             available_extensions.resize(extension_count);
             if (VkResult result = vkEnumerateInstanceExtensionProperties(layer_name, &extension_count, available_extensions.data()); result != VK_SUCCESS) {
-                std::cout << std::format("[ VulkanInstanceModule ] ERROR\nFailed to enumerate instance extension properties!\nError code: {}\n", int32_t(result));
+                outstream << std::format("[ VulkanInstanceModule ] ERROR\nFailed to enumerate instance extension properties!\nError code: {}\n", int32_t(result));
                 return result;
             }
             for (auto& i : extensions_to_check) {
@@ -186,7 +184,7 @@ private:
             VkDebugUtilsMessageTypeFlagsEXT message_type,
             const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
             void* user_data) -> VkBool32 {
-            std::cout << std::format("{}\n\n", callback_data->pMessage);
+            outstream << std::format("{}\n\n", callback_data->pMessage);
             return VK_FALSE;
         };
         VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info = {
@@ -205,11 +203,11 @@ private:
         if (vk_create_debug_utils_messenger) {
             VkResult result = vk_create_debug_utils_messenger(instance,&debug_messenger_create_info,nullptr,&debug_messenger);
             if (result != VK_SUCCESS) {
-                std::cout << std::format("[ VulkanInstanceModule ] ERROR\nFailed to create a debug messenger!\nError code: {}\n", int32_t(result));
+                outstream << std::format("[ VulkanInstanceModule ] ERROR\nFailed to create a debug messenger!\nError code: {}\n", int32_t(result));
             }
             return result;
         }
-        std::cout << std::format("[ VulkanInstanceModule ] ERROR\nFailed to get the function pointer of vkCreateDebugUtilsMessengerEXT!\n");
+        outstream << std::format("[ VulkanInstanceModule ] ERROR\nFailed to get the function pointer of vkCreateDebugUtilsMessengerEXT!\n");
         return VK_RESULT_MAX_ENUM;
     }
 

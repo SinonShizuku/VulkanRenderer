@@ -93,19 +93,19 @@ public:
 
     VkResult create_swapchain_internal() {
         if (VkResult result = vkCreateSwapchainKHR(vulkan_device->get_device(), &swapchain_create_info, nullptr, &swapchain)) {
-            std::cout << std::format("[ VulkanSwapchain ] ERROR\nFailed to create a swapchain!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanSwapchain ] ERROR\nFailed to create a swapchain!\nError code: {}\n", int32_t(result));
             return result;
         }
 
         // 获取交换链图像
         uint32_t swapchain_image_count = 0;
         if (VkResult result = vkGetSwapchainImagesKHR(vulkan_device->get_device(), swapchain, &swapchain_image_count, nullptr)) {
-            std::cout << std::format("[ VulkanSwapchain ] ERROR\nFailed to get the count of swapchain images!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanSwapchain ] ERROR\nFailed to get the count of swapchain images!\nError code: {}\n", int32_t(result));
             return result;
         }
         swapchain_images.resize(swapchain_image_count);
         if (VkResult result = vkGetSwapchainImagesKHR(vulkan_device->get_device(), swapchain, &swapchain_image_count, swapchain_images.data())) {
-            std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get swapchain images!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ graphicsBase ] ERROR\nFailed to get swapchain images!\nError code: {}\n", int32_t(result));
             return result;
         }
 
@@ -120,7 +120,7 @@ public:
         for (size_t i = 0; i < swapchain_image_count; i++) {
             swapchain_image_view_create_info.image = swapchain_images[i];
             if (VkResult result = vkCreateImageView(vulkan_device->get_device(), &swapchain_image_view_create_info, nullptr, &swapchain_image_views[i]); result != VK_SUCCESS) {
-                std::cout << std::format("[ VulkanSwapchain ] ERROR\nFailed to create a swapchain image view!\nError code: {}\n", int32_t(result));
+                outstream << std::format("[ VulkanSwapchain ] ERROR\nFailed to create a swapchain image view!\nError code: {}\n", int32_t(result));
                 return result;
             }
         }

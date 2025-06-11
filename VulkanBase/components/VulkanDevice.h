@@ -136,7 +136,7 @@ public:
             .pEnabledFeatures = &physical_device_features
         };
         if (VkResult result = vkCreateDevice(physical_device, &device_create_info, nullptr, &device);result!=VK_SUCCESS) {
-            std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to create a vulkan logical device!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanDevice ] ERROR\nFailed to create a vulkan logical device!\nError code: {}\n", int32_t(result));
             return result;
         }
         if (queue_family_index_graphics!=VK_QUEUE_FAMILY_IGNORED)
@@ -148,7 +148,7 @@ public:
         vkGetPhysicalDeviceProperties(physical_device,&physical_device_properties);
         vkGetPhysicalDeviceMemoryProperties(physical_device,&physical_device_memory_properties);
         // 输出所用的物理设备名称
-        std::cout << std::format("Renderer: {}\n", physical_device_properties.deviceName);
+        outstream << std::format("Renderer: {}\n", physical_device_properties.deviceName);
         for (auto& i : callbacks_create_device)
             i();
         return VK_SUCCESS;
@@ -160,14 +160,14 @@ public:
         std::vector<VkExtensionProperties> available_extensions;
         if (VkResult result = vkEnumerateDeviceExtensionProperties(physical_device, layer_name, &extension_count, nullptr)) {
             layer_name ?
-                std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to get the count of device extensions!\nLayer name:{}\n", layer_name) :
-                std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to get the count of device extensions!\n");
+                outstream << std::format("[ VulkanDevice ] ERROR\nFailed to get the count of device extensions!\nLayer name:{}\n", layer_name) :
+                outstream << std::format("[ VulkanDevice ] ERROR\nFailed to get the count of device extensions!\n");
             return result;
         }
         if (extension_count) {
             available_extensions.resize(extension_count);
             if (VkResult result = vkEnumerateDeviceExtensionProperties(physical_device, layer_name, &extension_count, available_extensions.data())) {
-                std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to enumerate device extension properties!\nError code: {}\n", int32_t(result));
+                outstream << std::format("[ VulkanDevice ] ERROR\nFailed to enumerate device extension properties!\nError code: {}\n", int32_t(result));
                 return result;
             }
             for (auto& i : extensions_to_check) {

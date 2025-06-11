@@ -77,7 +77,7 @@ public:
     VkResult wait_idle() const {
         VkResult result = vkDeviceWaitIdle(vulkan_device.get_device());
         if (result)
-            std::cout << std::format("[ graphicsBase ] ERROR\nFailed to wait for the device to be idle!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanCore ] ERROR\nFailed to wait for the device to be idle!\nError code: {}\n", int32_t(result));
         return result;
     }
 
@@ -99,18 +99,18 @@ public:
     VkResult acquire_physical_devices() {
         uint32_t device_count = 0;
         if (VkResult result = vkEnumeratePhysicalDevices(vulkan_instance.get_instance(), &device_count, nullptr); result != VK_SUCCESS) {
-            std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to get the count of physical devices!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanDevice ] ERROR\nFailed to get the count of physical devices!\nError code: {}\n", int32_t(result));
             return result;
         }
         if (!device_count) {
-            std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to find any physical device supports vulkan!\n");
+            outstream << std::format("[ VulkanDevice ] ERROR\nFailed to find any physical device supports vulkan!\n");
             abort();
         }
         std::vector<VkPhysicalDevice>& available_physical_devices = vulkan_device.get_available_physical_devices();
         available_physical_devices.resize(device_count);
         VkResult result = vkEnumeratePhysicalDevices(vulkan_instance.get_instance(), &device_count, available_physical_devices.data());
         if (result != VK_SUCCESS) {
-            std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to enumerate physical devices!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanDevice ] ERROR\nFailed to enumerate physical devices!\nError code: {}\n", int32_t(result));
         }
         return result;
     }
@@ -133,7 +133,7 @@ public:
             // 只在创建了window surface时获取支持呈现的队列族的索引
             if (auto &surface = vulkan_instance.get_surface()) {
                 if (VkResult result = vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, &support_presentation)) {
-                    std::cout << std::format("[ VulkanDevice ] ERROR\nFailed to determine if the queue family supports presentation!\nError code: {}\n", int32_t(result));
+                    outstream << std::format("[ VulkanDevice ] ERROR\nFailed to determine if the queue family supports presentation!\nError code: {}\n", int32_t(result));
                     return result;
                 }
             }
@@ -264,17 +264,17 @@ public:
     VkResult get_surface_formats() {
         uint32_t surfaceFormatCount;
         if (VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_device.get_physical_device(), vulkan_instance.get_surface(), &surfaceFormatCount, nullptr)) {
-            std::cout << std::format("[ VulkanSwapchain ] ERROR\nFailed to get the count of surface formats!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanSwapchain ] ERROR\nFailed to get the count of surface formats!\nError code: {}\n", int32_t(result));
             return result;
         }
         if (!surfaceFormatCount)
-            std::cout << std::format("[ VulkanSwapchain ] ERROR\nFailed to find any supported surface format!\n"),
+            outstream << std::format("[ VulkanSwapchain ] ERROR\nFailed to find any supported surface format!\n"),
             abort();
         auto &available_surface_formats = vulkan_swapchain.get_available_surface_formats();
         available_surface_formats.resize(surfaceFormatCount);
         VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(vulkan_device.get_physical_device(), vulkan_instance.get_surface(), &surfaceFormatCount, available_surface_formats.data());
         if (result)
-            std::cout << std::format("[ VulkanSwapchain ] ERROR\nFailed to get surface formats!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanSwapchain ] ERROR\nFailed to get surface formats!\nError code: {}\n", int32_t(result));
         return result;
     }
 
@@ -284,7 +284,7 @@ public:
         VkSurfaceCapabilitiesKHR surface_capabilities = {};
 
         if (VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkan_device.get_physical_device(), vulkan_instance.get_surface(), &surface_capabilities); result != VK_SUCCESS) {
-            std::cout << std::format("[ VulkanSwapchain ] ERROR\nFailed to get physical device surface capabilities!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanSwapchain ] ERROR\nFailed to get physical device surface capabilities!\nError code: {}\n", int32_t(result));
             return result;
         }
         swapchain_create_info.minImageCount = surface_capabilities.minImageCount + (surface_capabilities.maxImageCount > surface_capabilities.minImageCount);
@@ -311,7 +311,7 @@ public:
         if (surface_capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
             swapchain_create_info.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         else
-            std::cout << std::format("[ VulkanSwapchain ] WARNING\nVK_IMAGE_USAGE_TRANSFER_DST_BIT isn't supported!\n");
+            outstream << std::format("[ VulkanSwapchain ] WARNING\nVK_IMAGE_USAGE_TRANSFER_DST_BIT isn't supported!\n");
 
         if (available_surface_formats.empty())
             if (VkResult result = get_surface_formats())
@@ -322,21 +322,21 @@ public:
                 set_surface_formats({VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},swapchain_create_info)) {
                 swapchain_create_info.imageFormat = available_surface_formats[0].format;
                 swapchain_create_info.imageColorSpace = available_surface_formats[0].colorSpace;
-                std::cout << std::format("[ VulkanSwapchain ] WARNING\nFailed to select a four-component UNORM surface format!\n");
+                outstream << std::format("[ VulkanSwapchain ] WARNING\nFailed to select a four-component UNORM surface format!\n");
             }
         }
 
         uint32_t surface_present_mode_count = 0;
         if (VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_device.get_physical_device(), vulkan_instance.get_surface(), &surface_present_mode_count, nullptr)) {
-            std::cout << std::format("[ VulkanSwapchain ] ERROR\nFailed to get the count of surface present modes!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanSwapchain ] ERROR\nFailed to get the count of surface present modes!\nError code: {}\n", int32_t(result));
             return result;
         }
         if (!surface_present_mode_count)
-            std::cout << std::format("[ graphicsBase ] ERROR\nFailed to find any surface present mode!\n"),
+            outstream << std::format("[ graphicsBase ] ERROR\nFailed to find any surface present mode!\n"),
             abort();
         std::vector<VkPresentModeKHR> surface_present_modes(surface_present_mode_count);
         if (VkResult result = vkGetPhysicalDeviceSurfacePresentModesKHR(vulkan_device.get_physical_device(), vulkan_instance.get_surface(), &surface_present_mode_count, surface_present_modes.data())) {
-            std::cout << std::format("[ graphicsBase ] ERROR\nFailed to get surface present modes!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ graphicsBase ] ERROR\nFailed to get surface present modes!\nError code: {}\n", int32_t(result));
             return result;
         }
         swapchain_create_info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
@@ -367,7 +367,7 @@ public:
         auto &swapchain_create_info = vulkan_swapchain.get_swapchain_create_info();
 
         if (VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkan_device.get_physical_device(), vulkan_instance.get_surface(), &surface_capabilities)) {
-            std::cout << std::format("[ VulkanSwapchain ] ERROR\nFailed to get physical device surface capabilities!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanSwapchain ] ERROR\nFailed to get physical device surface capabilities!\nError code: {}\n", int32_t(result));
             return result;
         }
         if (surface_capabilities.currentExtent.width == 0 ||
@@ -381,7 +381,7 @@ public:
         if (!result && vulkan_device.get_queue_graphics()!= vulkan_device.get_queue_presentation())
             result = vkQueueWaitIdle(vulkan_device.get_queue_presentation());
         if (result) {
-            std::cout << std::format("[ VulkanSwapchain ] ERROR\nFailed to wait for the queue to be idle!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanSwapchain ] ERROR\nFailed to wait for the queue to be idle!\nError code: {}\n", int32_t(result));
             return result;
         }
 
