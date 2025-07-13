@@ -1,28 +1,20 @@
 #include "VulkanAppLauncher.h"
-#include "../VulkanBase/VulkanCore.h"
 
-VulkanAppLauncher* VulkanAppLauncher::singleton = nullptr;
+
+
 
 VulkanAppLauncher& VulkanAppLauncher::getSingleton(VkExtent2D size, bool fullScreen, bool isResizable, bool limitFrameRate) {
-    if (singleton == nullptr) {
-        singleton = new VulkanAppLauncher(size, fullScreen, isResizable, limitFrameRate);
-    }
-    return *singleton;
+    static VulkanAppLauncher singletonInstance(size, fullScreen, isResizable, limitFrameRate);
+    return singletonInstance;
 }
 
-VulkanAppLauncher::VulkanAppLauncher(VkExtent2D size, bool fullScreen, bool isResizable, bool limitFrameRate) {
-    window_width = size.width;
-    window_height = size.height;
-    is_fullscreen = fullScreen;
-    is_resizeable = isResizable;
-    limit_framerate = limitFrameRate;
-}
-
-VulkanAppLauncher::~VulkanAppLauncher() {
-    if (singleton != nullptr) {
-        delete singleton;
-        singleton = nullptr;
-    }
+VulkanAppLauncher::VulkanAppLauncher(VkExtent2D size, bool fullScreen, bool isResizable, bool limitFrameRate) :
+    window_width(size.width),
+    window_height(size.height),
+    is_fullscreen(fullScreen),
+    is_resizeable(isResizable),
+    limit_framerate(limitFrameRate)
+{
 }
 
 void VulkanAppLauncher::run() {
@@ -34,9 +26,8 @@ void VulkanAppLauncher::run() {
         outstream << std::format("[ InitializeWindow ] ERROR\nFailed to initialize window!\n");
         return;
     }
-    while (!glfwWindowShouldClose(window)) {
-        main_loop();
-    }
+
+    main_loop();
     terminate_window();
 }
 
@@ -63,7 +54,7 @@ bool VulkanAppLauncher::init_vulkan() {
     // 配置surface
     VkSurfaceKHR surface = VK_NULL_HANDLE;
 
-    if (VkResult result = glfwCreateWindowSurface(VulkanCore::get_singleton().get_vulkan_instance().get_instance(),window,nullptr,&surface)) {
+    if (result_t result = glfwCreateWindowSurface(VulkanCore::get_singleton().get_vulkan_instance().get_instance(),window,nullptr,&surface)) {
         outstream << std::format("[ InitializeWindow ] ERROR\nFailed to create a window surface!\nError code: {}\n", int32_t(result));
         glfwTerminate();
         return false;
@@ -77,7 +68,7 @@ bool VulkanAppLauncher::init_vulkan() {
         return false;
 
     // 创建交换链
-    if (VulkanCore::get_singleton().create_swapchain())
+    if (VulkanSwapchainManager::get_singleton().create_swapchain())
         return false;
 
     return true;
@@ -107,12 +98,52 @@ bool VulkanAppLauncher::init_window() {
 }
 
 void VulkanAppLauncher::main_loop() {
-    glfwPollEvents();
-    title_fps();
+    const auto& [render_pass,framebuffers] = VulkanPipelineManager::get_singleton().create_rpwf_screen();
+    create_pipeline_layout();
+    create_pipeline();
+
+    fence fence;
+    semaphore semaphore_image_is_available;
+    semaphore semaphore_rendering_is_over;
+
+    command_buffer command_buffer;
+    command_pool command_pool(VulkanCore::get_singleton().get_vulkan_device().get_queue_family_index_graphics(),VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    command_pool.allocate_buffers(command_buffer);
+
+    VkClearValue clear_color = { .color = { 1.f, 1.f, 1.f, 1.f } };
+
+    while (!glfwWindowShouldClose(window)) {
+        while (glfwGetWindowAttrib(window,GLFW_ICONIFIED))
+            glfwWaitEvents();
+
+        VulkanSwapchainManager::get_singleton().swap_image(semaphore_image_is_available);
+        auto i = VulkanSwapchainManager::get_singleton().get_current_image_index();
+
+        command_buffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        {
+            render_pass.cmd_begin(command_buffer,framebuffers[i],{{},window_size},clear_color);
+            {
+                vkCmdBindPipeline(command_buffer,VK_PIPELINE_BIND_POINT_GRAPHICS,pipeline_triangle);
+                vkCmdDraw(command_buffer,3,1,0,0);
+            }
+            render_pass.cmd_end(command_buffer);
+        }
+        command_buffer.end();
+
+        VulkanExecutionManager::get_singleton().submit_command_buffer_graphics(command_buffer, semaphore_image_is_available,semaphore_rendering_is_over,fence);
+        VulkanExecutionManager::get_singleton().present_image(semaphore_rendering_is_over);
+
+        glfwPollEvents();
+        title_fps();
+
+        fence.wait_and_reset();
+    }
+    VulkanPipelineManager::get_singleton().clear_rpwf_screen();
 }
 
 void VulkanAppLauncher::cleanup() {
-    VulkanCore::get_singleton().~VulkanCore();
+    VulkanSwapchainManager::get_singleton().destroy_singleton();
+    VulkanCore::get_singleton().destroy_singleton();
 }
 
 void VulkanAppLauncher::terminate_window() {
@@ -136,4 +167,39 @@ void VulkanAppLauncher::title_fps() {
         time0 = time1;
         dframe = 0;
     }
+}
+
+void VulkanAppLauncher::create_pipeline_layout() {
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
+    pipeline_layout_triangle.create(pipeline_layout_create_info);
+}
+
+void VulkanAppLauncher::create_pipeline() {
+    static VulkanShaderModule vert("../shader/FirstTriangle.vert.spv");
+    static VulkanShaderModule frag("../shader/FirstTriangle.frag.spv");
+    static VkPipelineShaderStageCreateInfo shader_stage_create_infos_triangle[2] = {
+        vert.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),
+        frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)
+    };
+    auto create = [&] {
+        GraphicsPipelineCreateInfoPack pipeline_create_info_pack;
+        pipeline_create_info_pack.create_info.layout = pipeline_layout_triangle;
+        pipeline_create_info_pack.create_info.renderPass = render_pass_and_frame_buffers().render_pass;
+        // 子通道只有一个，pipeline_create_info_pack.createInfo.renderPass使用默认值0
+        pipeline_create_info_pack.input_assembly_state_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        pipeline_create_info_pack.viewports.emplace_back(0.f, 0.f, float(window_width), float(window_height), 0.f, 1.f);
+        pipeline_create_info_pack.scissors.emplace_back(VkOffset2D{},window_size);
+        pipeline_create_info_pack.multisample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        pipeline_create_info_pack.color_blend_attachment_states.push_back({ .colorWriteMask = 0b1111 });
+        pipeline_create_info_pack.update_all_arrays();
+        pipeline_create_info_pack.create_info.stageCount = 2;
+        pipeline_create_info_pack.create_info.pStages = shader_stage_create_infos_triangle;
+        pipeline_triangle.create(pipeline_create_info_pack);
+    };
+    auto destroy = [this] {
+        pipeline_triangle.~VulkanPipeline();
+    };
+    VulkanSwapchainManager::get_singleton().add_callback_create_swapchain(create);
+    VulkanSwapchainManager::get_singleton().add_callback_destroy_swapchain(destroy);
+    create();
 }
