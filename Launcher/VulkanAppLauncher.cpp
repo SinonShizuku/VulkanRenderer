@@ -1,8 +1,5 @@
 #include "VulkanAppLauncher.h"
 
-
-
-
 VulkanAppLauncher& VulkanAppLauncher::getSingleton(VkExtent2D size, bool fullScreen, bool isResizable, bool limitFrameRate) {
     static VulkanAppLauncher singletonInstance(size, fullScreen, isResizable, limitFrameRate);
     return singletonInstance;
@@ -112,6 +109,14 @@ void VulkanAppLauncher::main_loop() {
 
     VkClearValue clear_color = { .color = { 1.f, 1.f, 1.f, 1.f } };
 
+    vertex vertices[] = {
+        { {  .0f, -.5f }, { 1, 0, 0, 1 } },//红色
+        { { -.5f,  .5f }, { 0, 1, 0, 1 } },//绿色
+        { {  .5f,  .5f }, { 0, 0, 1, 1 } } //蓝色
+    };
+    VulkanVertexBuffer vertex_buffer(sizeof vertices);
+    vertex_buffer.transfer_data(vertices);
+
     while (!glfwWindowShouldClose(window)) {
         while (glfwGetWindowAttrib(window,GLFW_ICONIFIED))
             glfwWaitEvents();
@@ -123,6 +128,8 @@ void VulkanAppLauncher::main_loop() {
         {
             render_pass.cmd_begin(command_buffer,framebuffers[i],{{},window_size},clear_color);
             {
+                VkDeviceSize offset = 0;
+                vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffer.Address(), &offset);
                 vkCmdBindPipeline(command_buffer,VK_PIPELINE_BIND_POINT_GRAPHICS,pipeline_triangle);
                 vkCmdDraw(command_buffer,3,1,0,0);
             }
@@ -175,8 +182,8 @@ void VulkanAppLauncher::create_pipeline_layout() {
 }
 
 void VulkanAppLauncher::create_pipeline() {
-    static VulkanShaderModule vert("../shader/FirstTriangle.vert.spv");
-    static VulkanShaderModule frag("../shader/FirstTriangle.frag.spv");
+    static VulkanShaderModule vert("../Shader/VertexBuffer.vert.spv");
+    static VulkanShaderModule frag("../Shader/VertexBuffer.frag.spv");
     static VkPipelineShaderStageCreateInfo shader_stage_create_infos_triangle[2] = {
         vert.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),
         frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -186,6 +193,15 @@ void VulkanAppLauncher::create_pipeline() {
         pipeline_create_info_pack.create_info.layout = pipeline_layout_triangle;
         pipeline_create_info_pack.create_info.renderPass = render_pass_and_frame_buffers().render_pass;
         // 子通道只有一个，pipeline_create_info_pack.createInfo.renderPass使用默认值0
+
+        // vertex buffer
+        //数据来自0号顶点缓冲区，输入频率是逐顶点输入
+        pipeline_create_info_pack.vertex_input_bindings.emplace_back(0, sizeof(vertex), VK_VERTEX_INPUT_RATE_VERTEX);
+        //location为0，数据来自0号顶点缓冲区，vec2对应VK_FORMAT_R32G32_SFLOAT，用offsetof计算position在vertex中的起始位置
+        pipeline_create_info_pack.vertex_input_attributes.emplace_back(0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex, position));
+        //location为1，数据来自0号顶点缓冲区，vec4对应VK_FORMAT_R32G32B32A32_SFLOAT，用offsetof计算color在vertex中的起始位置
+        pipeline_create_info_pack.vertex_input_attributes.emplace_back(1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(vertex, color));
+
         pipeline_create_info_pack.input_assembly_state_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         pipeline_create_info_pack.viewports.emplace_back(0.f, 0.f, float(window_width), float(window_height), 0.f, 1.f);
         pipeline_create_info_pack.scissors.emplace_back(VkOffset2D{},window_size);
@@ -194,6 +210,7 @@ void VulkanAppLauncher::create_pipeline() {
         pipeline_create_info_pack.update_all_arrays();
         pipeline_create_info_pack.create_info.stageCount = 2;
         pipeline_create_info_pack.create_info.pStages = shader_stage_create_infos_triangle;
+
         pipeline_triangle.create(pipeline_create_info_pack);
     };
     auto destroy = [this] {

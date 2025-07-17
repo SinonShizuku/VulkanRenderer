@@ -8,6 +8,8 @@
 #include "../VulkanBase/components/VulkanSync.h"
 #include "../VulkanBase/components/VulkanPipepline.h"
 #include "../VulkanBase/components/VulkanShaderModule.h"
+#include "../VulkanBase/components/VulkanBuffers.h"
+#include "../Scene/Vertex.h"
 
 class VulkanAppLauncher {
 public:

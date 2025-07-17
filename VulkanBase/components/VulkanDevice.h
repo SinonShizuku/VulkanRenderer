@@ -23,7 +23,7 @@ public:
         return physical_device_properties;
     }
 
-    [[nodiscard]] VkPhysicalDeviceMemoryProperties get_physical_device_memory_properties() const {
+    [[nodiscard]] VkPhysicalDeviceMemoryProperties &get_physical_device_memory_properties() {
         return physical_device_memory_properties;
     }
 
@@ -63,11 +63,11 @@ public:
         return queue_compute;
     }
 
-    [[nodiscard]] std::vector<void(*)()> & get_callbacks_create_device() {
+    [[nodiscard]] std::vector<std::function<void()>> & get_callbacks_create_device() {
         return callbacks_create_device;
     }
 
-    [[nodiscard]] std::vector<void(*)()> & get_callbacks_destroy_device() {
+    [[nodiscard]] std::vector<std::function<void()>> & get_callbacks_destroy_device() {
         return callbacks_destroy_device;
     }
 
@@ -187,11 +187,11 @@ public:
         return VK_SUCCESS;
     }
 
-    void add_callback_create_device(void(*function)()) {
+    void add_callback_create_device(std::function<void()> function) {
         callbacks_create_device.push_back(function);
     }
 
-    void add_callback_destory_device(void(*function)()) {
+    void add_callback_destory_device(std::function<void()> function) {
         callbacks_destroy_device.push_back(function);
     }
 
@@ -213,8 +213,8 @@ private:
     VkDevice device;
     std::vector<const char*> device_extensions;
 
-    std::vector<void(*)()> callbacks_create_device;
-    std::vector<void(*)()> callbacks_destroy_device;
+    std::vector<std::function<void()>> callbacks_create_device;
+    std::vector<std::function<void()>> callbacks_destroy_device;
 
 
 };

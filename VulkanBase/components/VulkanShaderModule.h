@@ -40,7 +40,7 @@ public:
         create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         VkResult result = vkCreateShaderModule(VulkanCore::get_singleton().get_vulkan_device().get_device(), &create_info, nullptr, &handle);
         if (result) {
-            outstream << std::format("[ VulkanShaderModule ] ERROR\nFailed to create a shader module!\nError code: {}\n", int32_t(result));
+            outstream << std::format("[ VulkanShaderModule ] ERROR\nFailed to create a Shader module!\nError code: {}\n", int32_t(result));
         }
         return result;
     }
