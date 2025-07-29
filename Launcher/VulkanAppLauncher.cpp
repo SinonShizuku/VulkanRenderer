@@ -1,5 +1,7 @@
 #include "VulkanAppLauncher.h"
 
+#include <thread>
+
 VulkanAppLauncher& VulkanAppLauncher::getSingleton(VkExtent2D size, bool fullScreen, bool isResizable, bool limitFrameRate) {
     static VulkanAppLauncher singletonInstance(size, fullScreen, isResizable, limitFrameRate);
     return singletonInstance;
@@ -11,8 +13,7 @@ VulkanAppLauncher::VulkanAppLauncher(VkExtent2D size, bool fullScreen, bool isRe
     is_fullscreen(fullScreen),
     is_resizeable(isResizable),
     limit_framerate(limitFrameRate)
-{
-}
+{}
 
 void VulkanAppLauncher::run() {
     if (!init_window()) {
@@ -96,26 +97,37 @@ bool VulkanAppLauncher::init_window() {
 
 void VulkanAppLauncher::main_loop() {
     const auto& [render_pass,framebuffers] = VulkanPipelineManager::get_singleton().create_rpwf_screen();
-    create_pipeline_layout();
+    create_pipeline_layout_with_push_constant();
     create_pipeline();
 
     fence fence;
     semaphore semaphore_image_is_available;
     semaphore semaphore_rendering_is_over;
 
-    command_buffer command_buffer;
-    command_pool command_pool(VulkanCore::get_singleton().get_vulkan_device().get_queue_family_index_graphics(),VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+    VulkanCommandBuffer command_buffer;
+    VulkanCommandPool command_pool(VulkanCore::get_singleton().get_vulkan_device().get_queue_family_index_graphics(),VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     command_pool.allocate_buffers(command_buffer);
 
     VkClearValue clear_color = { .color = { 1.f, 1.f, 1.f, 1.f } };
 
     vertex vertices[] = {
-        { {  .0f, -.5f }, { 1, 0, 0, 1 } },//红色
-        { { -.5f,  .5f }, { 0, 1, 0, 1 } },//绿色
-        { {  .5f,  .5f }, { 0, 0, 1, 1 } } //蓝色
+        { { .0f, -.5f }, { 1, 0, 0, 1 } },
+        { { -.5f, .5f }, { 0, 1, 0, 1 } },
+        { { .5f, .5f }, { 0, 0, 1, 1 } }
+    };
+    uint16_t indices[] = {
+        0, 1, 2,
+        1, 2, 3
+    };
+    push_constant_data_3 push_constant = {
+        {  .0f, .0f },
+        { -.5f, .0f },
+        {  .5f, .0f },
     };
     VulkanVertexBuffer vertex_buffer(sizeof vertices);
+    VulkanIndexBuffer index_buffer(sizeof indices);
     vertex_buffer.transfer_data(vertices);
+    index_buffer.transfer_data(indices);
 
     while (!glfwWindowShouldClose(window)) {
         while (glfwGetWindowAttrib(window,GLFW_ICONIFIED))
@@ -128,10 +140,17 @@ void VulkanAppLauncher::main_loop() {
         {
             render_pass.cmd_begin(command_buffer,framebuffers[i],{{},window_size},clear_color);
             {
+                // bind utils
                 VkDeviceSize offset = 0;
                 vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffer.Address(), &offset);
+                // vkCmdBindIndexBuffer(command_buffer,index_buffer,0,VK_INDEX_TYPE_UINT16);
                 vkCmdBindPipeline(command_buffer,VK_PIPELINE_BIND_POINT_GRAPHICS,pipeline_triangle);
-                vkCmdDraw(command_buffer,3,1,0,0);
+                vkCmdPushConstants(command_buffer,pipeline_layout_triangle,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof push_constant, &push_constant);
+
+                // draw
+                // vkCmdDraw(command_buffer,3,1,1,0);
+                // vkCmdDrawIndexed(command_buffer,6,1,0,0,0);
+                vkCmdDraw(command_buffer, 3, 3, 0, 0);
             }
             render_pass.cmd_end(command_buffer);
         }
@@ -181,8 +200,21 @@ void VulkanAppLauncher::create_pipeline_layout() {
     pipeline_layout_triangle.create(pipeline_layout_create_info);
 }
 
+void VulkanAppLauncher::create_pipeline_layout_with_push_constant() {
+    VkPushConstantRange push_constant_range = {
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,//offset
+        24//范围大小，3个vec2是24
+    };
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {
+        .pushConstantRangeCount = 1,
+        .pPushConstantRanges = &push_constant_range,
+    };
+    pipeline_layout_triangle.create(pipeline_layout_create_info);
+}
+
 void VulkanAppLauncher::create_pipeline() {
-    static VulkanShaderModule vert("../Shader/VertexBuffer.vert.spv");
+    static VulkanShaderModule vert("../Shader/PushConstant.vert.spv");
     static VulkanShaderModule frag("../Shader/VertexBuffer.frag.spv");
     static VkPipelineShaderStageCreateInfo shader_stage_create_infos_triangle[2] = {
         vert.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),

@@ -631,3 +631,40 @@ public:
         VulkanDeviceLocalBuffer::recreate(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |other_usages);
     }
 };
+
+class VulkanIndexBuffer : public VulkanDeviceLocalBuffer {
+public:
+    VulkanIndexBuffer() = default;
+    VulkanIndexBuffer(VkDeviceSize size, VkBufferUsageFlags other_usages = 0) : VulkanDeviceLocalBuffer(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT  |other_usages) {}
+
+    // non-const function
+    void create(VkDeviceSize size, VkBufferUsageFlags other_usages = 0) {
+        VulkanDeviceLocalBuffer::create(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT  |other_usages);
+    }
+
+    void recreate(VkDeviceSize size, VkBufferUsageFlags other_usages = 0) {
+        VulkanDeviceLocalBuffer::recreate(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT  |other_usages);
+    }
+};
+
+class VulkanUniformBuffer : public VulkanDeviceLocalBuffer {
+public:
+    VulkanUniformBuffer() = default;
+    VulkanUniformBuffer(VkDeviceSize size, VkBufferUsageFlags other_usages = 0) : VulkanDeviceLocalBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT   |other_usages) {}
+
+    // non-const function
+    void create(VkDeviceSize size, VkBufferUsageFlags other_usages = 0) {
+        VulkanDeviceLocalBuffer::create(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT   |other_usages);
+    }
+
+    void recreate(VkDeviceSize size, VkBufferUsageFlags other_usages = 0) {
+        VulkanDeviceLocalBuffer::recreate(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT   |other_usages);
+    }
+
+    // static function
+    static VkDeviceSize calculate_aligned_size(VkDeviceSize data_size) {
+        const VkDeviceSize& alignment = VulkanCore::get_singleton().get_vulkan_device().get_physical_device_properties().limits.minUniformBufferOffsetAlignment;
+        return data_size + alignment - 1 & ~(alignment - 1);
+    }
+};
+

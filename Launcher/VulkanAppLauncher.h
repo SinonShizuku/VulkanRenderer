@@ -37,6 +37,8 @@ private:
 
     bool init_vulkan();
     bool init_window();
+    // void init_assets(vertex vertices[], uint16_t indices[], glm::vec2 pushConstants[]);
+
     void main_loop();
     void cleanup();
     void terminate_window();
@@ -48,5 +50,6 @@ private:
     }
 
     void create_pipeline_layout();
+    void create_pipeline_layout_with_push_constant();
     void create_pipeline();
 };

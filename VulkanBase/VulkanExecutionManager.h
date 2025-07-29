@@ -29,9 +29,9 @@ public:
             }
         };
         auto clean_up = [this] {
-            command_pool_graphics.~command_pool();
-            command_pool_presentation.~command_pool();
-            command_pool_compute.~command_pool();
+            command_pool_graphics.~VulkanCommandPool();
+            command_pool_presentation.~VulkanCommandPool();
+            command_pool_compute.~VulkanCommandPool();
         };
         VulkanCore::get_singleton().get_vulkan_device().add_callback_create_device(initialize);
         VulkanCore::get_singleton().get_vulkan_device().add_callback_destory_device(clean_up);
@@ -39,15 +39,15 @@ public:
     ~VulkanExecutionManager() {}
 
     // getter
-    [[nodiscard]] const command_pool & get_command_pool_graphics() const {
+    [[nodiscard]] const VulkanCommandPool & get_command_pool_graphics() const {
         return command_pool_graphics;
     }
 
-    [[nodiscard]] const command_pool & get_command_pool_compute() const {
+    [[nodiscard]] const VulkanCommandPool & get_command_pool_compute() const {
         return command_pool_compute;
     }
 
-    [[nodiscard]] const command_buffer & get_command_buffer_transfer() const {
+    [[nodiscard]] const VulkanCommandBuffer & get_command_buffer_transfer() const {
         return command_buffer_transfer;
     }
 
@@ -232,11 +232,11 @@ public:
 
 private:
     VkFormatProperties format_properties[std::size(formatInfos_v1_0)] = {};
-    command_pool command_pool_graphics;
-    command_pool command_pool_presentation;
-    command_pool command_pool_compute;
-    command_buffer command_buffer_transfer;
-    command_buffer command_buffer_presentation;
+    VulkanCommandPool command_pool_graphics;
+    VulkanCommandPool command_pool_presentation;
+    VulkanCommandPool command_pool_compute;
+    VulkanCommandBuffer command_buffer_transfer;
+    VulkanCommandBuffer command_buffer_presentation;
 
 };
 

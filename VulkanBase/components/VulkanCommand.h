@@ -2,12 +2,12 @@
 #include "../VKStart.h"
 #include "../VulkanCore.h"
 
-class command_buffer {
-    friend class command_pool;
+class VulkanCommandBuffer {
+    friend class VulkanCommandPool;
     VkCommandBuffer handle = VK_NULL_HANDLE;
 public:
-    command_buffer() = default;
-    command_buffer(command_buffer &&other) noexcept {MoveHandle};
+    VulkanCommandBuffer() = default;
+    VulkanCommandBuffer(VulkanCommandBuffer &&other) noexcept {MoveHandle};
 
     // getter
     DefineHandleTypeOperator;
@@ -46,18 +46,18 @@ public:
     }
 };
 
-class command_pool {
+class VulkanCommandPool {
     VkCommandPool handle = VK_NULL_HANDLE;
 public:
-    command_pool() = default;
-    command_pool(VkCommandPoolCreateInfo& createInfo) {
+    VulkanCommandPool() = default;
+    VulkanCommandPool(VkCommandPoolCreateInfo& createInfo) {
         create(createInfo);
     }
-    command_pool(uint32_t queue_family_index, VkCommandPoolCreateFlags flags = 0) {
+    VulkanCommandPool(uint32_t queue_family_index, VkCommandPoolCreateFlags flags = 0) {
         create(queue_family_index, flags);
     }
-    command_pool(command_pool&& other) noexcept { MoveHandle; }
-    ~command_pool() { DestroyHandleBy(VulkanCore::get_singleton().get_vulkan_device().get_device(),vkDestroyCommandPool); }
+    VulkanCommandPool(VulkanCommandPool&& other) noexcept { MoveHandle; }
+    ~VulkanCommandPool() { DestroyHandleBy(VulkanCore::get_singleton().get_vulkan_device().get_device(),vkDestroyCommandPool); }
     //Getter
     DefineHandleTypeOperator;
     DefineAddressFunction;
@@ -74,7 +74,7 @@ public:
             outstream << std::format("[ commandPool ] ERROR\nFailed to allocate command buffers!\nError code: {}\n", int32_t(result));
         return result;
     }
-    result_t allocate_buffers(array_ref<command_buffer> buffers, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) const {
+    result_t allocate_buffers(array_ref<VulkanCommandBuffer> buffers, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) const {
         return allocate_buffers(
             { &buffers[0].handle, buffers.Count() },
             level);
@@ -83,7 +83,7 @@ public:
         vkFreeCommandBuffers(VulkanCore::get_singleton().get_vulkan_device().get_device(), handle, buffers.Count(), buffers.Pointer());
         memset(buffers.Pointer(), 0, buffers.Count() * sizeof(VkCommandBuffer));
     }
-    void free_buffers(array_ref<command_buffer> buffers) const {
+    void free_buffers(array_ref<VulkanCommandBuffer> buffers) const {
         free_buffers({ &buffers[0].handle, buffers.Count() });
     }
     //Non-const Function
