@@ -27,6 +27,7 @@ add_executable(VulkanRenderer main.cpp
         VulkanBase/components/VulkanShaderModule.h
         VulkanBase/components/VulkanBuffers.h
         Scene/Vertex.h
+        VulkanBase/components/VulkanDescriptor.h
 )
 
 if (WIN32)

@@ -97,7 +97,7 @@ bool VulkanAppLauncher::init_window() {
 
 void VulkanAppLauncher::main_loop() {
     const auto& [render_pass,framebuffers] = VulkanPipelineManager::get_singleton().create_rpwf_screen();
-    create_pipeline_layout_with_push_constant();
+    create_pipeline_layout_with_uniform_buffer();
     create_pipeline();
 
     fence fence;
@@ -124,10 +124,34 @@ void VulkanAppLauncher::main_loop() {
         { -.5f, .0f },
         {  .5f, .0f },
     };
+    glm::vec2 uniform_positions[] = {
+        {  .0f, .0f }, {},
+        { -.5f, .0f }, {},
+        {  .5f, .0f }, {}
+    };
     VulkanVertexBuffer vertex_buffer(sizeof vertices);
     VulkanIndexBuffer index_buffer(sizeof indices);
     vertex_buffer.transfer_data(vertices);
     index_buffer.transfer_data(indices);
+    VulkanUniformBuffer uniform_buffer(sizeof uniform_positions);
+    uniform_buffer.transfer_data(uniform_positions);
+
+    // 创建descriptor pool
+    VkDescriptorPoolSize descriptor_pool_sizes[] = {
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
+    };
+    VulkanDescriptorPool descriptor_pool(1, descriptor_pool_sizes);
+
+    // 分配descriptor set
+    VulkanDescriptorSet descriptor_set_triangle_position;
+    descriptor_pool.allocate_sets(descriptor_set_triangle_position,descriptor_set_layout_triangle);
+
+    // 将uniform buffer写入描述符
+    VkDescriptorBufferInfo buffer_info = {
+        .buffer = uniform_buffer,
+        .offset = 0,
+        .range = sizeof uniform_positions,
+    };
 
     while (!glfwWindowShouldClose(window)) {
         while (glfwGetWindowAttrib(window,GLFW_ICONIFIED))
@@ -145,7 +169,8 @@ void VulkanAppLauncher::main_loop() {
                 vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffer.Address(), &offset);
                 // vkCmdBindIndexBuffer(command_buffer,index_buffer,0,VK_INDEX_TYPE_UINT16);
                 vkCmdBindPipeline(command_buffer,VK_PIPELINE_BIND_POINT_GRAPHICS,pipeline_triangle);
-                vkCmdPushConstants(command_buffer,pipeline_layout_triangle,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof push_constant, &push_constant);
+                // vkCmdPushConstants(command_buffer,pipeline_layout_triangle,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof push_constant, &push_constant);
+                vkCmdBindDescriptorSets(command_buffer,VK_PIPELINE_BIND_POINT_GRAPHICS,pipeline_layout_triangle, 0, 1, descriptor_set_triangle_position.Address(), 0, nullptr);
 
                 // draw
                 // vkCmdDraw(command_buffer,3,1,1,0);
@@ -213,8 +238,27 @@ void VulkanAppLauncher::create_pipeline_layout_with_push_constant() {
     pipeline_layout_triangle.create(pipeline_layout_create_info);
 }
 
+void VulkanAppLauncher::create_pipeline_layout_with_uniform_buffer() {
+    VkDescriptorSetLayoutBinding descriptor_set_layout_binding = {
+        .binding = 0,
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+    };
+    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {
+        .bindingCount = 1,
+        .pBindings = &descriptor_set_layout_binding
+    };
+    descriptor_set_layout_triangle.create(descriptor_set_layout_create_info);
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {
+        .setLayoutCount = 1,
+        .pSetLayouts = descriptor_set_layout_triangle.Address()
+    };
+    pipeline_layout_triangle.create(pipeline_layout_create_info);
+}
+
 void VulkanAppLauncher::create_pipeline() {
-    static VulkanShaderModule vert("../Shader/PushConstant.vert.spv");
+    static VulkanShaderModule vert("../Shader/UniformBuffer.vert.spv");
     static VulkanShaderModule frag("../Shader/VertexBuffer.frag.spv");
     static VkPipelineShaderStageCreateInfo shader_stage_create_infos_triangle[2] = {
         vert.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),

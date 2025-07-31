@@ -10,6 +10,7 @@
 #include "../VulkanBase/components/VulkanShaderModule.h"
 #include "../VulkanBase/components/VulkanBuffers.h"
 #include "../Scene/Vertex.h"
+#include "../VulkanBase/components/VulkanDescriptor.h"
 
 class VulkanAppLauncher {
 public:
@@ -35,6 +36,9 @@ private:
     VulkanPipelineLayout pipeline_layout_triangle;
     VulkanPipeline pipeline_triangle;
 
+    // 描述符集
+    VulkanDescriptorSetLayout descriptor_set_layout_triangle;
+
     bool init_vulkan();
     bool init_window();
     // void init_assets(vertex vertices[], uint16_t indices[], glm::vec2 pushConstants[]);
@@ -51,5 +55,6 @@ private:
 
     void create_pipeline_layout();
     void create_pipeline_layout_with_push_constant();
+    void create_pipeline_layout_with_uniform_buffer();
     void create_pipeline();
 };
