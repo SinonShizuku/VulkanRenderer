@@ -10,7 +10,7 @@ if(WIN32)
 endif ()
 
 add_executable(VulkanRenderer main.cpp
-        VulkanBase/VKStart.h
+        Start.h
         Launcher/VulkanAppLauncher.cpp
         Launcher/VulkanAppLauncher.h
         VulkanBase/VulkanCore.h
@@ -28,6 +28,12 @@ add_executable(VulkanRenderer main.cpp
         VulkanBase/components/VulkanBuffers.h
         Scene/Vertex.h
         VulkanBase/components/VulkanDescriptor.h
+        Scene/Texture.h
+        VulkanBase/VulkanContext.h
+        VulkanBase/components/VulkanOperation.h
+        stb_image_implementation.cpp
+        VulkanBase/components/VulkanSampler.h
+        VulkanBase/components/VulkanTexture.h
 )
 
 if (WIN32)

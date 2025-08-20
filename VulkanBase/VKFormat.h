@@ -1,7 +1,6 @@
 #pragma once
-#include "VKStart.h"
 
-struct formatInfo {
+struct VulkanFormatInfo {
     enum rawDataType :uint8_t {
         other,        //0，没数据或各个通道不同
         integer,      //1，数据类型为整型
@@ -12,7 +11,7 @@ struct formatInfo {
     uint8_t sizePerPixel;     //每个像素的大小，0意味着压缩
     uint8_t rawDataType;      //底层数据类型
 };
-constexpr formatInfo formatInfos_v1_0[] = {
+constexpr VulkanFormatInfo format_infos_v1_0[] = {
         { 0, 0, 0, 0 },//VK_FORMAT_UNDEFINED = 0,
 
         { 2, 0, 1, 1 },//VK_FORMAT_R4G4_UNORM_PACK8 = 1,

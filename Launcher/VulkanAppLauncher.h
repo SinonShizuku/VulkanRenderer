@@ -1,5 +1,5 @@
 #pragma once
-#include "../VulkanBase/VKStart.h"
+#include "../Start.h"
 #include "../VulkanBase/VulkanCore.h"
 #include "../VulkanBase/VulkanExecutionManager.h"
 #include "../VulkanBase/VulkanPipelineManager.h"
@@ -11,6 +11,8 @@
 #include "../VulkanBase/components/VulkanBuffers.h"
 #include "../Scene/Vertex.h"
 #include "../VulkanBase/components/VulkanDescriptor.h"
+#include "../VulkanBase/components/VulkanTexture.h"
+#include "../VulkanBase/components/VulkanSampler.h"
 
 class VulkanAppLauncher {
 public:
@@ -35,9 +37,12 @@ private:
     // 管线
     VulkanPipelineLayout pipeline_layout_triangle;
     VulkanPipeline pipeline_triangle;
+    VulkanPipelineLayout pipeline_layout_texture;
+    VulkanPipeline pipeline_texture;
 
     // 描述符集
     VulkanDescriptorSetLayout descriptor_set_layout_triangle;
+    VulkanDescriptorSetLayout descriptor_set_layout_texture;
 
     bool init_vulkan();
     bool init_window();
@@ -56,5 +61,7 @@ private:
     void create_pipeline_layout();
     void create_pipeline_layout_with_push_constant();
     void create_pipeline_layout_with_uniform_buffer();
+    void create_pipeline_layout_with_texture();
+
     void create_pipeline();
 };

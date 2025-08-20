@@ -1,8 +1,9 @@
 #pragma once
 #include <queue>
 
-#include "../VKStart.h"
+#include "../../Start.h"
 #include "VulkanInstance.h"
+#include "../VKFormat.h"
 
 class VulkanDevice {
 public:
@@ -71,6 +72,26 @@ public:
         return callbacks_destroy_device;
     }
 
+    [[nodiscard]] const VkFormatProperties& get_format_properties(VkFormat format) const {
+        if constexpr (ENABLE_DEBUG_MESSENGER)
+            if (uint32_t(format) >= std::size(format_infos_v1_0))
+                outstream << std::format("[ VulkanFormatProperties ] ERROR\nThis function only supports definite formats provided by VK_VERSION_1_0.\n"),
+                abort();
+        return format_properties[format];
+    }
+
+    constexpr VulkanFormatInfo get_format_info(VkFormat format) {
+        if constexpr (ENABLE_DEBUG_MESSENGER)
+            if (uint32_t(format) >= std::size(format_infos_v1_0))
+                outstream << std::format("[ VulkanFormatInfo ] ERROR\nThis function only supports definite formats provided by VK_VERSION_1_0.\n"),
+                        abort();
+        return format_infos_v1_0[uint32_t(format)];
+    }
+
+    [[nodiscard]] size_t get_format_properties_size() const {
+        return std::size(format_properties);
+    }
+
     void set_device(VkDevice device) {
         this->device = device;
     }
@@ -93,6 +114,12 @@ public:
 
     void set_physical_device(VkPhysicalDevice physical_device) {
         this->physical_device = physical_device;
+    }
+
+    void set_physical_device_format_properties(){
+        for (size_t i=0; i<std::size(format_properties);i++) {
+            vkGetPhysicalDeviceFormatProperties(physical_device,VkFormat(i),&format_properties[i]);
+        }
     }
 
     void add_device_extension(const char *extension_name);
@@ -148,7 +175,8 @@ public:
         vkGetPhysicalDeviceProperties(physical_device,&physical_device_properties);
         vkGetPhysicalDeviceMemoryProperties(physical_device,&physical_device_memory_properties);
         // 输出所用的物理设备名称
-        outstream << std::format("Renderer: {}\n", physical_device_properties.deviceName);
+        auto renderer_name = physical_device_properties.deviceName;
+        outstream << std::format("Renderer: {}\n", renderer_name);
         for (auto& i : callbacks_create_device)
             i();
         return VK_SUCCESS;
@@ -162,6 +190,7 @@ public:
             layer_name ?
                 outstream << std::format("[ VulkanDevice ] ERROR\nFailed to get the count of device extensions!\nLayer name:{}\n", layer_name) :
                 outstream << std::format("[ VulkanDevice ] ERROR\nFailed to get the count of device extensions!\n");
+
             return result;
         }
         if (extension_count) {
@@ -197,7 +226,7 @@ public:
 
 
 private:
-
+    VkFormatProperties format_properties[std::size(format_infos_v1_0)] = {};
     VkPhysicalDevice physical_device{};
     VkPhysicalDeviceProperties physical_device_properties{};
     VkPhysicalDeviceMemoryProperties physical_device_memory_properties{};
@@ -215,6 +244,12 @@ private:
 
     std::vector<std::function<void()>> callbacks_create_device;
     std::vector<std::function<void()>> callbacks_destroy_device;
+
+    void print_renderer_name() {
+        // 输出所用的物理设备名称
+        auto renderer_name = physical_device_properties.deviceName;
+        outstream << std::format("Renderer: {}\n", renderer_name);
+    }
 
 
 };

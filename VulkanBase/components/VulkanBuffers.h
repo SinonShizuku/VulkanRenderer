@@ -1,7 +1,9 @@
 #pragma once
-#include "../VKStart.h"
+#include "../../Start.h"
 #include "../VulkanCore.h"
-#include "../VulkanExecutionManager.h"
+#include "VulkanCommand.h"
+
+
 
 class VulkanDeviceMemory {
     VkDeviceMemory handle = VK_NULL_HANDLE;
@@ -359,9 +361,9 @@ public:
 
     // getter
     [[nodiscard]] VkImage Image() const { return static_cast<const VulkanImage&>(*this); }
-    [[nodiscard]] const VkImage* AddressOfImage() const { return VulkanImage::Address(); }
+    [[nodiscard]] const VkImage* get_address_of_image() const { return VulkanImage::Address(); }
     [[nodiscard]] VkDeviceMemory Memory() const { return static_cast<const VulkanDeviceMemory&>(*this); }
-    const VkDeviceMemory* AddressOfMemory() const { return VulkanDeviceMemory::Address(); }
+    const VkDeviceMemory* get_address_of_memory() const { return VulkanDeviceMemory::Address(); }
     bool AreBound() const { return are_bound; }
     using VulkanDeviceMemory::get_allocation_size;
     using VulkanDeviceMemory::get_memory_properties;
@@ -513,8 +515,39 @@ public:
 
     //该函数创建线性布局的混叠2d图像
     [[nodiscard]]
-    VkImage AliasedImage2d(VkFormat format, VkExtent2D extent) {
-        /*待后续填充*/
+    VkImage aliased_image2d(VkFormat format, VkExtent2D extent) {
+        if (!(VulkanCore::get_singleton().get_vulkan_device().get_format_properties(format).linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT)) {
+            return VK_NULL_HANDLE;
+        }
+        VkDeviceSize image_data_size = VkDeviceSize(VulkanCore::get_singleton().get_vulkan_device().get_format_info(format).sizePerPixel)*extent.width*extent.height;
+        if (image_data_size>AllocationSize()) return VK_NULL_HANDLE;
+        VkImageFormatProperties image_format_properties = {};
+        vkGetPhysicalDeviceImageFormatProperties(VulkanCore::get_singleton().get_vulkan_device().get_physical_device(),format,VK_IMAGE_TYPE_2D,VK_IMAGE_TILING_LINEAR,VK_IMAGE_USAGE_TRANSFER_DST_BIT,0,&image_format_properties);
+        if (extent.width > image_format_properties.maxExtent.width ||
+        extent.height > image_format_properties.maxExtent.height ||
+        image_data_size > image_format_properties.maxResourceSize)
+            return VK_NULL_HANDLE;
+        VkImageCreateInfo image_create_info = {
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = format,
+            .extent = {extent.width, extent.height, 1},
+            .mipLevels = 1,
+            .arrayLayers = 1,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .tiling = VK_IMAGE_TILING_LINEAR,
+            .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+            .initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED
+        };
+        aliased_image.~VulkanImage();
+        aliased_image.create(image_create_info);
+        VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT,0,0};
+        VkSubresourceLayout subresource_layout = {};
+        vkGetImageSubresourceLayout(VulkanCore::get_singleton().get_vulkan_device().get_device(), aliased_image, &subresource, &subresource_layout);
+        if (subresource_layout.size != image_data_size)
+            return VK_NULL_HANDLE;
+        aliased_image.bind_memory(buffer_memory.Memory());
+        return aliased_image;
+
     }
 
     //Static Function
@@ -540,8 +573,8 @@ public:
         staging_buffer_main_thread.Get().retrieve_data(pData_src, size);
     }
     [[nodiscard]]
-    static VkImage AliasedImage2d_MainThread(VkFormat format, VkExtent2D extent) {
-        return staging_buffer_main_thread.Get().AliasedImage2d(format, extent);
+    static VkImage aliased_image2d_main_thread(VkFormat format, VkExtent2D extent) {
+        return staging_buffer_main_thread.Get().aliased_image2d(format, extent);
     }
 };
 
@@ -566,12 +599,12 @@ public:
             return;
         }
         VulkanStagingBuffer::buffer_data_main_thread(pData_src, size);
-        auto& command_buffer = VulkanExecutionManager::get_singleton().get_command_buffer_transfer();
+        auto& command_buffer = VulkanCommand::get_singleton().get_command_buffer_transfer();
         command_buffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         VkBufferCopy region = { 0, offset, size };
         vkCmdCopyBuffer(command_buffer, VulkanStagingBuffer::get_buffer_main_thread(), buffer_memory.Buffer(), 1, &region);
         command_buffer.end();
-        VulkanExecutionManager::get_singleton().execute_command_buffer_graphics(command_buffer);
+        VulkanCommand::get_singleton().execute_command_buffer_graphics(command_buffer);
     }
     //适用于更新不连续的多块数据，stride是每组数据间的步长，这里offset当然是目标缓冲区中的offset
     void transfer_data(const void* pData_src, uint32_t elementCount, VkDeviceSize elementSize, VkDeviceSize stride_src, VkDeviceSize stride_dst, VkDeviceSize offset = 0) const {
@@ -584,14 +617,14 @@ public:
             return;
         }
         VulkanStagingBuffer::buffer_data_main_thread(pData_src, stride_src * elementCount);
-        auto& command_buffer = VulkanExecutionManager::get_singleton().get_command_buffer_transfer();
+        auto& command_buffer = VulkanCommand::get_singleton().get_command_buffer_transfer();
         command_buffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         std::unique_ptr<VkBufferCopy[]> regions = std::make_unique<VkBufferCopy[]>(elementCount);
         for (size_t i = 0; i < elementCount; i++)
             regions[i] = { stride_src * i, stride_dst * i + offset, elementSize };
         vkCmdCopyBuffer(command_buffer, VulkanStagingBuffer::get_buffer_main_thread(), buffer_memory.Buffer(), elementCount, regions.get());
         command_buffer.end();
-        VulkanExecutionManager::get_singleton().execute_command_buffer_graphics(command_buffer);
+        VulkanCommand::get_singleton().execute_command_buffer_graphics(command_buffer);
     }
     //适用于从缓冲区开头更新连续的数据块，数据大小自动判断
     void transfer_data(const auto& data_src) const {

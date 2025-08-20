@@ -1,4 +1,5 @@
 #pragma once
+
 // includes
 #include <iostream>
 #include <fstream>
@@ -17,6 +18,7 @@
 #include <numbers>
 #include <cstring>
 #include <functional>
+#include <thread>
 
 // GLM
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -35,7 +37,7 @@
 #pragma comment(lib, "glfw3.lib") //链接编译所需的静态库
 
 // stb_image.h
-#include <stb/stb_image.h>
+// #include <stb/stb_image.h>
 
 // Vulkan
 #ifdef _WIN32                        //考虑平台是Windows的情况（请自行解决其他平台上的差异）
@@ -146,3 +148,9 @@ public:
 
 // 输出方式封装
 inline auto& outstream = std::cout;//不是constexpr，因为std::cout具有外部链接
+
+// 封装闭区间“在内”
+template<std::signed_integral T>
+constexpr bool between_closed(T min, T num, T max) {
+    return ((num - min) | (max - num)) >= 0;
+}

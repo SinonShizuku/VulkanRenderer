@@ -13,6 +13,11 @@ struct vertex {
     glm::vec4 color;
 };
 
+struct texture_vertex {
+    glm::vec2 position;
+    glm::vec2 texCoord;
+};
+
 struct push_constant_data_3 {
     glm::vec2 offset0;
     glm::vec2 offset1;
