@@ -268,7 +268,7 @@ public:
         return VK_SUCCESS;
     }
 
-    result_t recreate_device(VkDeviceCreateFlags flags = 0) {
+    result_t recreate_device(uint32_t api_version, VkDeviceCreateFlags flags = 0) {
         if (result_t result = wait_idle()) {
             return result;
         }
@@ -287,7 +287,7 @@ public:
         if (auto device = vulkan_device->get_device())//防函数执行失败后再次调用时发生重复销毁
             vkDestroyDevice(device, nullptr),
             vulkan_device->set_device(VK_NULL_HANDLE);
-        return vulkan_device->create_device(flags);
+        return vulkan_device->create_device(api_version, flags);
     }
 
     result_t swap_image(VkSemaphore semaphore_image_is_available) {

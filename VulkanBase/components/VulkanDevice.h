@@ -176,7 +176,7 @@ public:
         set_pnext(pnext_physical_device_memory_properties, &next, allow_duplicate);
     }
 
-    result_t create_device(VkDeviceCreateFlags flags = 0) {
+    result_t create_device(uint32_t api_version, VkDeviceCreateFlags flags = 0) {
         float queue_priority = 1.0f;
         VkDeviceQueueCreateInfo queue_create_info[3] = {
             {
@@ -202,9 +202,9 @@ public:
             && queue_family_index_compute != queue_family_index_graphics
             && queue_family_index_compute != queue_family_index_presentation)
             queue_create_info[queue_create_info_count++].queueFamilyIndex = queue_family_index_compute;
-
-        VkPhysicalDeviceFeatures physical_device_features;
-        vkGetPhysicalDeviceFeatures(physical_device, &physical_device_features);
+        get_physical_device_features(api_version);
+        // VkPhysicalDeviceFeatures physical_device_features;
+        // vkGetPhysicalDeviceFeatures(physical_device, &physical_device_features);
         VkDeviceCreateInfo device_create_info = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
             .flags = flags,
@@ -212,8 +212,16 @@ public:
             .pQueueCreateInfos = queue_create_info,
             .enabledExtensionCount = uint32_t(device_extensions.size()),
             .ppEnabledExtensionNames = device_extensions.data(),
-            .pEnabledFeatures = &physical_device_features
+            // .pEnabledFeatures = &physical_device_features
         };
+        void** ppnext = nullptr;
+        if (api_version >= VK_API_VERSION_1_1)
+            ppnext = set_pnext(pnext_device_create_info, &physical_device_features);
+        else
+            device_create_info.pEnabledFeatures = &physical_device_features.features;
+        device_create_info.pNext = pnext_device_create_info;
+        if (ppnext)
+            *ppnext = nullptr;
         if (result_t result = vkCreateDevice(physical_device, &device_create_info, nullptr, &device);result!=VK_SUCCESS) {
             outstream << std::format("[ VulkanDevice ] ERROR\nFailed to create a vulkan logical device!\nError code: {}\n", int32_t(result));
             return result;
@@ -224,8 +232,9 @@ public:
             vkGetDeviceQueue(device,queue_family_index_presentation,0,&queue_presentation);
         if (queue_family_index_compute!=VK_QUEUE_FAMILY_IGNORED)
             vkGetDeviceQueue(device,queue_family_index_compute,0,&queue_compute);
-        vkGetPhysicalDeviceProperties(physical_device,&physical_device_properties);
-        vkGetPhysicalDeviceMemoryProperties(physical_device,&physical_device_memory_properties);
+        get_physical_device_properties(api_version);
+        // vkGetPhysicalDeviceProperties(physical_device,&physical_device_properties);
+        // vkGetPhysicalDeviceMemoryProperties(physical_device,&physical_device_memory_properties);
         // 输出所用的物理设备名称
         auto renderer_name = physical_device_properties.properties.deviceName;
         outstream << std::format("Renderer: {}\n", renderer_name);
@@ -335,6 +344,7 @@ private:
                     physical_device_features_vulkan12.pNext = &physical_device_features_vulkan13;
                 }
             }
+            set_pnext(physical_device_features.pNext,pnext_physical_device_features);
             vkGetPhysicalDeviceFeatures2(physical_device, &physical_device_features);
         }
         else
@@ -354,8 +364,12 @@ private:
                     physical_device_properties_vulkan12.pNext = &physical_device_properties_vulkan13;
                 }
             }
+            set_pnext(physical_device_properties.pNext,pnext_physical_device_properties);
             vkGetPhysicalDeviceProperties2(physical_device, &physical_device_properties);
-            physical_device_memory_properties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2 };
+            physical_device_memory_properties = {
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2,
+                pnext_physical_device_properties
+            };
             vkGetPhysicalDeviceMemoryProperties2(physical_device, &physical_device_memory_properties);
         }
         else {

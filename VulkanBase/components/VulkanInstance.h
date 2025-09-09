@@ -72,6 +72,7 @@ public:
         };
         VkInstanceCreateInfo instance_info{
             .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+            .pNext = pnext_instance_create_info,
             .flags = flags,
             .pApplicationInfo = &app_info,
             .enabledLayerCount = static_cast<uint32_t>(instance_layers.size()),

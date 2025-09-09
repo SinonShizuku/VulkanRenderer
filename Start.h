@@ -156,7 +156,7 @@ constexpr bool between_closed(T min, T num, T max) {
 }
 
 // pnext设置封装
-static void** set_pnext(void*& pbegin, void* pnext, bool allow_duplicate) {
+static void** set_pnext(void*& pbegin, void* pnext, bool allow_duplicate = false) {
     struct vk_structure_head {
         VkStructureType stype;
         void* pnext;

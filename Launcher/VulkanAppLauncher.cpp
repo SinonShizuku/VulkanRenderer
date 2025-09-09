@@ -50,6 +50,7 @@ bool VulkanAppLauncher::init_vulkan() {
 
     // 创建Vulkan实例
     VulkanCore::get_singleton().get_vulkan_instance().use_latest_api_version();
+    auto api_version = VulkanCore::get_singleton().get_vulkan_instance().get_api_version();
     if (VulkanCore::get_singleton().get_vulkan_instance().create_instance())
         return false;
 
@@ -66,7 +67,7 @@ bool VulkanAppLauncher::init_vulkan() {
     // 配置Vulkan设备
     if (VulkanCore::get_singleton().acquire_physical_devices() ||
         VulkanCore::get_singleton().determine_physical_device(0,true,false) ||
-        VulkanCore::get_singleton().get_vulkan_device().create_device())
+        VulkanCore::get_singleton().get_vulkan_device().create_device(api_version))
         return false;
 
     // 创建交换链
