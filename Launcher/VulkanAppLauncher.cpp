@@ -34,6 +34,7 @@ void VulkanAppLauncher::run() {
 
 
 bool VulkanAppLauncher::init_vulkan() {
+    
     uint32_t extension_count = 0;
     const char** extension_names = glfwGetRequiredInstanceExtensions(&extension_count);
     if (!extension_names) {

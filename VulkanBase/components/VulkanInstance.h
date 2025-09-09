@@ -58,6 +58,10 @@ public:
 
     void add_instance_extension(const char *extensionName);
 
+    void add_next_structure_instance_create_info(auto& next, bool allow_duplicate = false) {
+        set_pnext(pnext_instance_create_info, &next, allow_duplicate);
+    }
+
     result_t create_instance(VkInstanceCreateFlags flags = 0) {
         if constexpr (ENABLE_DEBUG_MESSENGER)
             add_instance_layer("VK_LAYER_KHRONOS_validation"),
@@ -176,7 +180,7 @@ private:
     VkSurfaceKHR surface;
     uint32_t api_version = VK_API_VERSION_1_0;
 
-
+    void *pnext_instance_create_info;
 
     result_t create_debug_messenger() {
         static PFN_vkDebugUtilsMessengerCallbackEXT debug_messenger_callback = [](
@@ -210,6 +214,7 @@ private:
         outstream << std::format("[ VulkanInstanceModule ] ERROR\nFailed to get the function pointer of vkCreateDebugUtilsMessengerEXT!\n");
         return VK_RESULT_MAX_ENUM;
     }
+
 
 
 };

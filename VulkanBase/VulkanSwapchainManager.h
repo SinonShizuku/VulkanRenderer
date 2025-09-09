@@ -310,6 +310,10 @@ public:
         return VK_SUCCESS;
     }
 
+    void add_next_structure_swapchain_create_info(auto& next, bool allow_duplicate = false) {
+        set_pnext(const_cast<void*&>(swapchain_create_info.pNext), &next, allow_duplicate);
+    }
+
 
 private:
     VulkanDevice *vulkan_device;

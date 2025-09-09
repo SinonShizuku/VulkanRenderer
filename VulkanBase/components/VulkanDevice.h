@@ -20,13 +20,13 @@ public:
         return physical_device;
     }
 
-    [[nodiscard]] VkPhysicalDeviceProperties get_physical_device_properties() const {
-        return physical_device_properties;
-    }
-
-    [[nodiscard]] VkPhysicalDeviceMemoryProperties &get_physical_device_memory_properties() {
-        return physical_device_memory_properties;
-    }
+    // [[nodiscard]] VkPhysicalDeviceProperties get_physical_device_properties() const {
+    //     return physical_device_properties;
+    // }
+    //
+    // [[nodiscard]] VkPhysicalDeviceMemoryProperties &get_physical_device_memory_properties() {
+    //     return physical_device_memory_properties;
+    // }
 
     [[nodiscard]] std::vector<VkPhysicalDevice> & get_available_physical_devices() {
         return available_physical_devices;
@@ -92,6 +92,42 @@ public:
         return std::size(format_properties);
     }
 
+    constexpr const VkPhysicalDeviceFeatures2& get_physical_device_features() const {
+        return physical_device_features;
+    }
+
+    constexpr const VkPhysicalDeviceVulkan11Features& get_physical_device_vulkan11_features() const {
+        return physical_device_features_vulkan11;
+    }
+
+    constexpr const VkPhysicalDeviceVulkan12Features& get_physical_device_vulkan12_features() const {
+        return physical_device_features_vulkan12;
+    }
+
+    constexpr const VkPhysicalDeviceVulkan13Features& get_physical_device_vulkan13_features() const {
+        return physical_device_features_vulkan13;
+    }
+
+    [[nodiscard]] constexpr const VkPhysicalDeviceProperties & get_physical_device_properties() const {
+        return physical_device_properties.properties;
+    }
+
+    [[nodiscard]] constexpr const VkPhysicalDeviceVulkan11Properties & get_physical_device_properties_vulkan11() const {
+        return physical_device_properties_vulkan11;
+    }
+
+    [[nodiscard]] constexpr const VkPhysicalDeviceVulkan12Properties & get_physical_device_properties_vulkan12() const {
+        return physical_device_properties_vulkan12;
+    }
+
+    [[nodiscard]] constexpr const VkPhysicalDeviceVulkan13Properties & get_physical_device_properties_vulkan13() const {
+        return physical_device_properties_vulkan13;
+    }
+
+    [[nodiscard]] constexpr const VkPhysicalDeviceMemoryProperties & get_physical_device_memory_properties() const {
+        return physical_device_memory_properties.memoryProperties;
+    }
+
     void set_device(VkDevice device) {
         this->device = device;
     }
@@ -123,6 +159,22 @@ public:
     }
 
     void add_device_extension(const char *extension_name);
+
+    void add_next_structure_device_create_info(auto& next, bool allow_duplicate = false) {
+        set_pnext(pnext_device_create_info, &next, allow_duplicate);
+    }
+
+    void add_next_structure_physical_device_features(auto& next, bool allow_duplicate = false) {
+        set_pnext(pnext_physical_device_features, &next, allow_duplicate);
+    }
+
+    void add_next_structure_physical_device_properties(auto& next, bool allow_duplicate = false) {
+        set_pnext(pnext_physical_device_properties, &next, allow_duplicate);
+    }
+
+    void add_next_structure_physical_device_memory_properties(auto& next, bool allow_duplicate = false) {
+        set_pnext(pnext_physical_device_memory_properties, &next, allow_duplicate);
+    }
 
     result_t create_device(VkDeviceCreateFlags flags = 0) {
         float queue_priority = 1.0f;
@@ -175,7 +227,7 @@ public:
         vkGetPhysicalDeviceProperties(physical_device,&physical_device_properties);
         vkGetPhysicalDeviceMemoryProperties(physical_device,&physical_device_memory_properties);
         // 输出所用的物理设备名称
-        auto renderer_name = physical_device_properties.deviceName;
+        auto renderer_name = physical_device_properties.properties.deviceName;
         outstream << std::format("Renderer: {}\n", renderer_name);
         for (auto& i : callbacks_create_device)
             i();
@@ -228,9 +280,23 @@ public:
 private:
     VkFormatProperties format_properties[std::size(format_infos_v1_0)] = {};
     VkPhysicalDevice physical_device{};
-    VkPhysicalDeviceProperties physical_device_properties{};
-    VkPhysicalDeviceMemoryProperties physical_device_memory_properties{};
+    // VkPhysicalDeviceProperties physical_device_properties{};
+    // VkPhysicalDeviceMemoryProperties physical_device_memory_properties{};
     std::vector<VkPhysicalDevice> available_physical_devices;
+
+    // 物理设备特性
+    VkPhysicalDeviceFeatures2 physical_device_features;
+    VkPhysicalDeviceVulkan11Features physical_device_features_vulkan11;
+    VkPhysicalDeviceVulkan12Features physical_device_features_vulkan12;
+    VkPhysicalDeviceVulkan13Features physical_device_features_vulkan13;
+
+    // 物理设备属性
+    VkPhysicalDeviceProperties2 physical_device_properties;
+    VkPhysicalDeviceVulkan11Properties physical_device_properties_vulkan11; //Provided by VK_API_VERSION_1_2
+    VkPhysicalDeviceVulkan12Properties physical_device_properties_vulkan12;
+    VkPhysicalDeviceVulkan13Properties physical_device_properties_vulkan13;
+
+    VkPhysicalDeviceMemoryProperties2 physical_device_memory_properties;
 
     uint32_t queue_family_index_graphics = VK_QUEUE_FAMILY_IGNORED;
     uint32_t queue_family_index_presentation = VK_QUEUE_FAMILY_IGNORED;
@@ -245,10 +311,57 @@ private:
     std::vector<std::function<void()>> callbacks_create_device;
     std::vector<std::function<void()>> callbacks_destroy_device;
 
+    void *pnext_device_create_info;
+    void *pnext_physical_device_features;
+    void *pnext_physical_device_properties;
+    void *pnext_physical_device_memory_properties;
+
     void print_renderer_name() {
         // 输出所用的物理设备名称
-        auto renderer_name = physical_device_properties.deviceName;
+        auto renderer_name = physical_device_properties.properties.deviceName;
         outstream << std::format("Renderer: {}\n", renderer_name);
+    }
+
+    void get_physical_device_features(uint32_t api_version) {
+        if (api_version >= VK_API_VERSION_1_1) {
+            physical_device_features = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+            physical_device_features_vulkan11 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
+            physical_device_features_vulkan12 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+            physical_device_features_vulkan13 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+            if (api_version >= VK_API_VERSION_1_2) {
+                physical_device_features.pNext = &physical_device_features_vulkan11;
+                physical_device_features_vulkan11.pNext = &physical_device_features_vulkan12;
+                if (api_version >= VK_API_VERSION_1_3) {
+                    physical_device_features_vulkan12.pNext = &physical_device_features_vulkan13;
+                }
+            }
+            vkGetPhysicalDeviceFeatures2(physical_device, &physical_device_features);
+        }
+        else
+            vkGetPhysicalDeviceFeatures(physical_device, &physical_device_features.features);
+    }
+
+    void get_physical_device_properties(uint32_t api_version) {
+        if (api_version >= VK_API_VERSION_1_1) {
+            physical_device_properties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
+            physical_device_properties_vulkan11 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES };
+            physical_device_properties_vulkan12 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES };
+            physical_device_properties_vulkan13 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES };
+            if (api_version >= VK_API_VERSION_1_2) {
+                physical_device_properties.pNext = &physical_device_properties_vulkan11;
+                physical_device_properties_vulkan11.pNext = &physical_device_properties_vulkan12;
+                if (api_version >= VK_API_VERSION_1_3) {
+                    physical_device_properties_vulkan12.pNext = &physical_device_properties_vulkan13;
+                }
+            }
+            vkGetPhysicalDeviceProperties2(physical_device, &physical_device_properties);
+            physical_device_memory_properties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2 };
+            vkGetPhysicalDeviceMemoryProperties2(physical_device, &physical_device_memory_properties);
+        }
+        else {
+            vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties.properties);
+            vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_memory_properties.memoryProperties);
+        }
     }
 
 

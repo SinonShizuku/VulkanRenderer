@@ -154,3 +154,34 @@ template<std::signed_integral T>
 constexpr bool between_closed(T min, T num, T max) {
     return ((num - min) | (max - num)) >= 0;
 }
+
+// pnext设置封装
+static void** set_pnext(void*& pbegin, void* pnext, bool allow_duplicate) {
+    struct vk_structure_head {
+        VkStructureType stype;
+        void* pnext;
+    };
+    if (!pnext)
+        return nullptr;
+
+    std::function<void**(void*&, void*, bool)> set_p_next_internal;
+    set_p_next_internal = [&set_p_next_internal](void*& p_current_node, void* p_next, bool allow_duplicate) -> void** {
+        if (p_current_node == p_next)
+            return nullptr;
+
+        if (p_current_node) {
+            if (!allow_duplicate &&
+                reinterpret_cast<vk_structure_head*>(p_current_node)->stype == reinterpret_cast<vk_structure_head*>(p_next)->stype) {
+                return nullptr;
+                }
+            // 递归调用
+            return set_p_next_internal(reinterpret_cast<vk_structure_head*>(p_current_node)->pnext, p_next, allow_duplicate);
+        } else {
+            // 找到末尾，插入 pNext
+            p_current_node = p_next;
+            return &p_current_node;
+        }
+    };
+
+    return set_p_next_internal(pbegin, pnext, allow_duplicate);
+}

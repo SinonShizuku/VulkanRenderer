@@ -191,8 +191,8 @@ public:
         return VK_SUCCESS;
     }
 
-
 private:
     VulkanInstance vulkan_instance;
     VulkanDevice vulkan_device;
+
 };
