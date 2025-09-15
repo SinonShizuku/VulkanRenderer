@@ -3,11 +3,27 @@ project(VulkanRenderer)
 
 set(CMAKE_CXX_STANDARD 23)
 
+# glfw & glm
+include_directories(Submodule/glfw/include)
+include_directories(Submodule/glm)
+
+# Vulkan
 if(WIN32)
-    include_directories(D:/cpplib/glfw/include)
-    include_directories(D:/VulkanSDK/1.4.313.1/Include)
-    include_directories(D:/cpplib/glm)
+    # change to your VulkanSDK include path
+    set(VULKAN_SDK_PATH "D:/VulkanSDK/1.4.313.1")
+    include_directories(${VULKAN_SDK_PATH}/Include)
 endif ()
+
+# imgui
+set(IMGUI_DIR "Submodule/imgui")
+include_directories(${IMGUI_DIR} ${IMGUI_DIR}/backends)
+file(GLOB IMGUI_CORE_SOURCES
+        "${IMGUI_DIR}/*.cpp"
+)
+set(IMGUI_BACKEND_SOURCES
+        "${IMGUI_DIR}/backends/imgui_impl_glfw.cpp"
+        "${IMGUI_DIR}/backends/imgui_impl_vulkan.cpp"
+)
 
 add_executable(VulkanRenderer main.cpp
         Start.h
@@ -36,12 +52,14 @@ add_executable(VulkanRenderer main.cpp
         VulkanBase/components/VulkanTexture.h
 )
 
+target_sources(VulkanRenderer PRIVATE
+        ${IMGUI_CORE_SOURCES}
+        ${IMGUI_BACKEND_SOURCES}
+)
+
 if (WIN32)
-target_link_libraries(VulkanRenderer D:/cpplib/glfw/lib-mingw-w64/libglfw3.a D:/VulkanSDK/1.4.313.1/Lib/vulkan-1.lib)
+    target_link_libraries(VulkanRenderer ${CMAKE_CURRENT_SOURCE_DIR}/Submodule/glfw/lib-mingw-w64/libglfw3.a ${VULKAN_SDK_PATH}/Lib/vulkan-1.lib)
 else()
     # Linux/WSL specific linking
     target_link_libraries(VulkanRenderer glfw vulkan)
 endif()
-
-
-

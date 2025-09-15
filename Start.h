@@ -47,6 +47,10 @@
 #endif
 #include <vulkan/vulkan.h>
 
+// imgui
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
 
 
 // global defines
