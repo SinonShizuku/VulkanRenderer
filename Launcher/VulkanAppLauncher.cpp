@@ -97,8 +97,45 @@ bool VulkanAppLauncher::init_window() {
         glfwTerminate();
         return false;
     }
+
     return true;
 }
+
+bool VulkanAppLauncher::init_imgui(VkPipelineCache cache,
+                                    VkDescriptorPool descriptor_pool,
+                                    VkRenderPass render_pass,
+                                    uint32_t subpass,
+                                    uint32_t min_image_count,
+                                    VkSampleCountFlagBits msaa_samples,
+                                    VkAllocationCallbacks* allocator,
+                                    void(*check_fn)(VkResult)) {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForVulkan(window,true);
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance = VulkanCore::get_singleton().get_vulkan_instance().get_instance();
+    init_info.PhysicalDevice = VulkanCore::get_singleton().get_vulkan_device().get_physical_device();
+    init_info.Device = VulkanCore::get_singleton().get_vulkan_device().get_device();
+    init_info.QueueFamily = VulkanCore::get_singleton().get_vulkan_device().get_queue_family_index_graphics();
+    init_info.Queue = VulkanCore::get_singleton().get_vulkan_device().get_queue_graphics();
+    init_info.PipelineCache = VK_NULL_HANDLE;
+    init_info.PipelineCache = cache;
+    init_info.DescriptorPool = descriptor_pool;
+    init_info.RenderPass = render_pass;
+    init_info.Subpass = subpass;
+    init_info.MinImageCount = min_image_count;
+    init_info.ImageCount = VulkanSwapchainManager::get_singleton().get_swapchain_image_count();
+    init_info.Allocator = allocator;
+    init_info.CheckVkResultFn = check_fn;
+    return ImGui_ImplVulkan_Init(&init_info);
+}
+
 
 void VulkanAppLauncher::main_loop() {
     const auto& [render_pass,framebuffers] = VulkanPipelineManager::get_singleton().create_rpwf_screen();
@@ -159,7 +196,24 @@ void VulkanAppLauncher::main_loop() {
     VkDescriptorPoolSize descriptor_pool_sizes[] = {
         { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
     };
+
+    VkDescriptorPoolSize imgui_pool_sizes[] =
+    {
+        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+    };
+
     VulkanDescriptorPool descriptor_pool(1, descriptor_pool_sizes);
+    VulkanDescriptorPool descriptor_pool_imgui(1000*IM_ARRAYSIZE(imgui_pool_sizes), imgui_pool_sizes);
 
     // 分配descriptor set
     VulkanDescriptorSet descriptor_set_texture;
@@ -180,9 +234,27 @@ void VulkanAppLauncher::main_loop() {
     // };
     // descriptor_set_triangle_position.write(buffer_info,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 
+    init_imgui(VK_NULL_HANDLE,
+        descriptor_pool_imgui,
+        render_pass,
+        0,
+        VulkanSwapchainManager::get_singleton().get_swapchain_create_info().minImageCount,
+        VK_SAMPLE_COUNT_1_BIT,
+        nullptr,
+        nullptr);
+
+
+    bool show_demo_window = true;
+
     while (!glfwWindowShouldClose(window)) {
         while (glfwGetWindowAttrib(window,GLFW_ICONIFIED))
             glfwWaitEvents();
+
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::ShowDemoWindow(&show_demo_window);
 
         VulkanSwapchainManager::get_singleton().swap_image(semaphore_image_is_available);
         auto i = VulkanSwapchainManager::get_singleton().get_current_image_index();
@@ -205,6 +277,10 @@ void VulkanAppLauncher::main_loop() {
                 // vkCmdDraw(command_buffer,3,1,1,0);
                 // vkCmdDrawIndexed(command_buffer,6,1,0,0,0);
                 vkCmdDraw(command_buffer, 4, 1, 0, 0);
+
+                // imgui draw
+                ImGui::Render();
+                ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), command_buffer);
             }
             render_pass.cmd_end(command_buffer);
         }

@@ -44,8 +44,18 @@ private:
     VulkanDescriptorSetLayout descriptor_set_layout_triangle;
     VulkanDescriptorSetLayout descriptor_set_layout_texture;
 
+    // VulkanDescriptorPool descriptor_pool;
+
     bool init_vulkan();
     bool init_window();
+    bool init_imgui(VkPipelineCache cache,
+        VkDescriptorPool descriptor_pool,
+        VkRenderPass render_pass,
+        uint32_t subpass,
+        uint32_t min_image_count,
+        VkSampleCountFlagBits msaa_samples,
+        VkAllocationCallbacks* allocator,
+        void(*)(VkResult));
     // void init_assets(vertex vertices[], uint16_t indices[], glm::vec2 pushConstants[]);
 
     void main_loop();
