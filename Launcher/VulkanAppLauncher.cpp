@@ -184,11 +184,11 @@ void VulkanAppLauncher::main_loop() {
     // uniform_buffer.transfer_data(uniform_positions);
 
     texture_vertex vertices[] = {
-        { { -1.f, -1.f }, { 0, 0 } },
-        { {  1.f, -1.f }, { 1, 0 } },
+        { { -.5f, -.5f }, { 0, 0 } },
+        { {  .5f, -.5f }, { 1, 0 } },
         { { -.5f,  .5f }, { 0, 1 } },
         { {  .5f,  .5f }, { 1, 1 } }
-    };
+        };
     VulkanVertexBuffer vertex_buffer(sizeof vertices);
     vertex_buffer.transfer_data(vertices);
 
