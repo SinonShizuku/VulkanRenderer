@@ -3,7 +3,7 @@
 #include "VulkanOperation.h"
 #include "../../Start.h"
 #include "../VulkanCore.h"
-#include "../../Scene/Texture.h"
+#include "../../Interaction/Texture.h"
 
 class VulkanTexture : public Texture {
 protected:

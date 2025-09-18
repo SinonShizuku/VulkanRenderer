@@ -4,7 +4,7 @@
 #include "VulkanSwapchainManager.h"
 #include "components/VulkanCommand.h"
 #include "components/VulkanSync.h"
-#include "../Scene/Texture.h"
+#include "../Interaction/Texture.h"
 #include "components/VulkanOperation.h"
 #include "components/VulkanBuffers.h"
 

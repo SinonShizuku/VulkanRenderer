@@ -9,7 +9,7 @@
 #include "../VulkanBase/components/VulkanPipepline.h"
 #include "../VulkanBase/components/VulkanShaderModule.h"
 #include "../VulkanBase/components/VulkanBuffers.h"
-#include "../Scene/Vertex.h"
+#include "../Geometry/Vertex.h"
 #include "../VulkanBase/components/VulkanDescriptor.h"
 #include "../VulkanBase/components/VulkanTexture.h"
 #include "../VulkanBase/components/VulkanSampler.h"

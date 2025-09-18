@@ -42,9 +42,9 @@ add_executable(VulkanRenderer main.cpp
         VulkanBase/VulkanResourceManager.h
         VulkanBase/components/VulkanShaderModule.h
         VulkanBase/components/VulkanBuffers.h
-        Scene/Vertex.h
+        Geometry/Vertex.h
         VulkanBase/components/VulkanDescriptor.h
-        Scene/Texture.h
+        Interaction/Texture.h
         VulkanBase/VulkanContext.h
         VulkanBase/components/VulkanOperation.h
         stb_image_implementation.cpp
