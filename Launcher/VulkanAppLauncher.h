@@ -13,6 +13,8 @@
 #include "../VulkanBase/components/VulkanDescriptor.h"
 #include "../VulkanBase/components/VulkanTexture.h"
 #include "../VulkanBase/components/VulkanSampler.h"
+#include "../UI/ImGuiManager.h"
+#include "../Demos/DemoManager.h"
 
 class VulkanAppLauncher {
 public:
@@ -48,20 +50,20 @@ private:
 
     bool init_vulkan();
     bool init_window();
-    bool init_imgui(VkPipelineCache cache,
-        VkDescriptorPool descriptor_pool,
-        VkRenderPass render_pass,
-        uint32_t subpass,
-        uint32_t min_image_count,
-        VkSampleCountFlagBits msaa_samples,
-        VkAllocationCallbacks* allocator,
-        void(*)(VkResult));
+    // bool init_imgui(VkPipelineCache cache,
+    //     VkDescriptorPool descriptor_pool,
+    //     VkRenderPass render_pass,
+    //     uint32_t subpass,
+    //     uint32_t min_image_count,
+    //     VkSampleCountFlagBits msaa_samples,
+    //     VkAllocationCallbacks* allocator,
+    //     void(*)(VkResult));
     // void init_assets(vertex vertices[], uint16_t indices[], glm::vec2 pushConstants[]);
 
     void main_loop();
     void cleanup();
     void terminate_window();
-    void title_fps();
+    // void title_fps();
 
     const auto& render_pass_and_frame_buffers() {
         static const auto& rpwf = VulkanPipelineManager::get_singleton().create_rpwf_screen();

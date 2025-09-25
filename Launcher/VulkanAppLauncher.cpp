@@ -1,4 +1,5 @@
 #include "VulkanAppLauncher.h"
+#include "../Demos/VulkanTests/BuffersAndPictureTest.h"
 
 VulkanAppLauncher& VulkanAppLauncher::getSingleton(VkExtent2D size, bool fullScreen, bool isResizable, bool limitFrameRate) {
     static VulkanAppLauncher singletonInstance(size, fullScreen, isResizable, limitFrameRate);
@@ -101,203 +102,27 @@ bool VulkanAppLauncher::init_window() {
     return true;
 }
 
-bool VulkanAppLauncher::init_imgui(VkPipelineCache cache,
-                                    VkDescriptorPool descriptor_pool,
-                                    VkRenderPass render_pass,
-                                    uint32_t subpass,
-                                    uint32_t min_image_count,
-                                    VkSampleCountFlagBits msaa_samples,
-                                    VkAllocationCallbacks* allocator,
-                                    void(*check_fn)(VkResult)) {
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-
-    ImGui::StyleColorsDark();
-
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForVulkan(window,true);
-    ImGui_ImplVulkan_InitInfo init_info = {};
-    init_info.Instance = VulkanCore::get_singleton().get_vulkan_instance().get_instance();
-    init_info.PhysicalDevice = VulkanCore::get_singleton().get_vulkan_device().get_physical_device();
-    init_info.Device = VulkanCore::get_singleton().get_vulkan_device().get_device();
-    init_info.QueueFamily = VulkanCore::get_singleton().get_vulkan_device().get_queue_family_index_graphics();
-    init_info.Queue = VulkanCore::get_singleton().get_vulkan_device().get_queue_graphics();
-    init_info.PipelineCache = VK_NULL_HANDLE;
-    init_info.PipelineCache = cache;
-    init_info.DescriptorPool = descriptor_pool;
-    init_info.RenderPass = render_pass;
-    init_info.Subpass = subpass;
-    init_info.MinImageCount = min_image_count;
-    init_info.ImageCount = VulkanSwapchainManager::get_singleton().get_swapchain_image_count();
-    init_info.Allocator = allocator;
-    init_info.CheckVkResultFn = check_fn;
-    return ImGui_ImplVulkan_Init(&init_info);
-}
-
-
 void VulkanAppLauncher::main_loop() {
-    const auto& [render_pass,framebuffers] = VulkanPipelineManager::get_singleton().create_rpwf_screen();
-    create_pipeline_layout_with_texture();
-    create_pipeline();
-
-    fence fence;
-    semaphore semaphore_image_is_available;
-    semaphore semaphore_rendering_is_over;
-
-    VulkanCommandBuffer command_buffer;
-    VulkanCommandPool command_pool(VulkanCore::get_singleton().get_vulkan_device().get_queue_family_index_graphics(),VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-    command_pool.allocate_buffers(command_buffer);
-
-    // load texture image
-    VulkanTexture2D texture_image("../Assets/img.png", VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, true);
-    VkSamplerCreateInfo sampler_create_info = VulkanTexture2D::get_sampler_create_info();
-    VulkanSampler sampler(sampler_create_info);
-
-    VkClearValue clear_color = { .color = { 1.f, 1.f, 1.f, 1.f } };
-
-    // vertex vertices[] = {
-    //     { { .0f, -.5f }, { 1, 0, 0, 1 } },
-    //     { { -.5f, .5f }, { 0, 1, 0, 1 } },
-    //     { { .5f, .5f }, { 0, 0, 1, 1 } }
-    // };
-    // uint16_t indices[] = {
-    //     0, 1, 2,
-    //     1, 2, 3
-    // };
-    // push_constant_data_3 push_constant = {
-    //     {  .0f, .0f },
-    //     { -.5f, .0f },
-    //     {  .5f, .0f },
-    // };
-    // glm::vec2 uniform_positions[] = {
-    //     {  .0f, .0f }, {},
-    //     { -.5f, .0f }, {},
-    //     {  .5f, .0f }, {}
-    // };
-    // VulkanVertexBuffer vertex_buffer(sizeof vertices);
-    // VulkanIndexBuffer index_buffer(sizeof indices);
-    // vertex_buffer.transfer_data(vertices);
-    // index_buffer.transfer_data(indices);
-    // VulkanUniformBuffer uniform_buffer(sizeof uniform_positions);
-    // uniform_buffer.transfer_data(uniform_positions);
-
-    texture_vertex vertices[] = {
-        { { -.5f, -.5f }, { 0, 0 } },
-        { {  .5f, -.5f }, { 1, 0 } },
-        { { -.5f,  .5f }, { 0, 1 } },
-        { {  .5f,  .5f }, { 1, 1 } }
-        };
-    VulkanVertexBuffer vertex_buffer(sizeof vertices);
-    vertex_buffer.transfer_data(vertices);
-
-    // 创建descriptor pool
-    VkDescriptorPoolSize descriptor_pool_sizes[] = {
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
-    };
-
-    VkDescriptorPoolSize imgui_pool_sizes[] =
-    {
-        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-    };
-
-    VulkanDescriptorPool descriptor_pool(1, descriptor_pool_sizes);
-    VulkanDescriptorPool descriptor_pool_imgui(1000*IM_ARRAYSIZE(imgui_pool_sizes), imgui_pool_sizes);
-
-    // 分配descriptor set
-    VulkanDescriptorSet descriptor_set_texture;
-    descriptor_pool.allocate_sets(descriptor_set_texture,descriptor_set_layout_texture);
-
-    VkDescriptorImageInfo image_info = {
-        .sampler = sampler,
-        .imageView = texture_image.get_image_view(),
-        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    };
-    descriptor_set_texture.write(image_info,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-
-    // // 将uniform buffer写入描述符
-    // VkDescriptorBufferInfo buffer_info = {
-    //     .buffer = uniform_buffer,
-    //     .offset = 0,
-    //     .range = sizeof uniform_positions,
-    // };
-    // descriptor_set_triangle_position.write(buffer_info,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-
-    init_imgui(VK_NULL_HANDLE,
-        descriptor_pool_imgui,
-        render_pass,
-        0,
-        VulkanSwapchainManager::get_singleton().get_swapchain_create_info().minImageCount,
-        VK_SAMPLE_COUNT_1_BIT,
-        nullptr,
-        nullptr);
-
-
-    bool show_demo_window = true;
-
-    while (!glfwWindowShouldClose(window)) {
-        while (glfwGetWindowAttrib(window,GLFW_ICONIFIED))
-            glfwWaitEvents();
-
-        ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        ImGui::ShowDemoWindow(&show_demo_window);
-
-        VulkanSwapchainManager::get_singleton().swap_image(semaphore_image_is_available);
-        auto i = VulkanSwapchainManager::get_singleton().get_current_image_index();
-
-        command_buffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-        {
-            render_pass.cmd_begin(command_buffer,framebuffers[i],{{},window_size},clear_color);
-            {
-                // bind utils
-                VkDeviceSize offset = 0;
-                vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffer.Address(), &offset);
-                // vkCmdBindIndexBuffer(command_buffer,index_buffer,0,VK_INDEX_TYPE_UINT16);
-                vkCmdBindPipeline(command_buffer,VK_PIPELINE_BIND_POINT_GRAPHICS,pipeline_texture);
-                // vkCmdPushConstants(command_buffer,pipeline_layout_triangle,VK_SHADER_STAGE_VERTEX_BIT,0,sizeof push_constant, &push_constant);
-                vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    pipeline_layout_texture, 0, 1, descriptor_set_texture.Address(), 0, nullptr);
-                // vkCmdBindDescriptorSets(command_buffer,VK_PIPELINE_BIND_POINT_GRAPHICS,pipeline_layout_triangle, 0, 1, descriptor_set_triangle_position.Address(), 0, nullptr);
-
-                // draw
-                // vkCmdDraw(command_buffer,3,1,1,0);
-                // vkCmdDrawIndexed(command_buffer,6,1,0,0,0);
-                vkCmdDraw(command_buffer, 4, 1, 0, 0);
-
-                // imgui draw
-                ImGui::Render();
-                ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), command_buffer);
-            }
-            render_pass.cmd_end(command_buffer);
-        }
-        command_buffer.end();
-
-        VulkanCommand::get_singleton().submit_command_buffer_graphics(command_buffer, semaphore_image_is_available,semaphore_rendering_is_over,fence);
-        VulkanCommand::get_singleton().present_image(semaphore_rendering_is_over);
-
-        glfwPollEvents();
-        title_fps();
-
-        fence.wait_and_reset();
+    // 初始化场景管理系统
+    if (!DemoManager::get_singleton().initialize(window)) {
+        outstream << "Failed to initialize demo manager!\n";
+        return;
     }
-    VulkanPipelineManager::get_singleton().clear_rpwf_screen();
+
+    // 创建并切换到默认场景
+    auto default_demo = std::make_unique<BuffersAndPictureTest>();
+    if (!DemoManager::get_singleton().switch_to_demo(std::move(default_demo))) {
+        outstream << "Failed to switch to default demo!\n";
+        return;
+    }
+
+    // 运行主循环
+    DemoManager::get_singleton().run_main_loop();
+
 }
 
 void VulkanAppLauncher::cleanup() {
+    VulkanPipelineManager::get_singleton().clear_rpwf_screen();
     VulkanSwapchainManager::get_singleton().destroy_singleton();
     VulkanCore::get_singleton().destroy_singleton();
 }
@@ -305,24 +130,6 @@ void VulkanAppLauncher::cleanup() {
 void VulkanAppLauncher::terminate_window() {
     cleanup();
     glfwTerminate();
-}
-
-void VulkanAppLauncher::title_fps() {
-    static double time0 = glfwGetTime();
-    static double time1;
-    static double dt;
-    static int dframe = -1;
-    static std::stringstream info;
-    time1 = glfwGetTime();
-    dframe++;
-    if ((dt = time1 - time0) >= 1) {
-        info.precision(1);
-        info << window_title << "    " << std::fixed << dframe / dt << " FPS";
-        glfwSetWindowTitle(window, info.str().c_str());
-        info.str("");//清空所用的stringstream
-        time0 = time1;
-        dframe = 0;
-    }
 }
 
 void VulkanAppLauncher::create_pipeline_layout() {

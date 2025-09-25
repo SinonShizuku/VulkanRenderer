@@ -15,6 +15,10 @@ public:
         return singleton;
     }
 
+    const auto& get_rpwf_screen() {
+        return rpwf;
+    }
+
     const auto& create_rpwf_screen() {
         VkAttachmentDescription attachment_description = {
             .format = VulkanSwapchainManager::get_singleton().get_swapchain_create_info().imageFormat,

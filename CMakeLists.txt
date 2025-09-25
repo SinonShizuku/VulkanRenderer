@@ -39,7 +39,7 @@ add_executable(VulkanRenderer main.cpp
         VulkanBase/VulkanPipelineManager.h
         VulkanBase/components/VulkanRenderPassWithFramebuffers.h
         VulkanBase/components/VulkanPipepline.h
-        VulkanBase/VulkanResourceManager.h
+        Demos/SharedResourceManager.h
         VulkanBase/components/VulkanShaderModule.h
         VulkanBase/components/VulkanBuffers.h
         Geometry/Vertex.h
@@ -50,6 +50,11 @@ add_executable(VulkanRenderer main.cpp
         stb_image_implementation.cpp
         VulkanBase/components/VulkanSampler.h
         VulkanBase/components/VulkanTexture.h
+        Demos/DemoManager.h
+        UI/ImGuiManager.h
+        Demos/DemoCategories.h
+        Demos/DemoBase.h
+        Demos/VulkanTests/BuffersAndPictureTest.h
 )
 
 target_sources(VulkanRenderer PRIVATE

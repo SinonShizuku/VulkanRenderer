@@ -258,11 +258,16 @@ public:
 
         for (auto&i:callbacks_destroy_swapchain)
             i();
+        outstream << this->get_swapchain_image_views().size();
+
         // 销毁旧ImageViews
         for (auto&i:swapchain_image_views)
             if (i) vkDestroyImageView(vulkan_device->get_device(), i, nullptr);
 
         swapchain_image_views.resize(0);
+
+        if (result_t result = create_swapchain_internal())
+            return result;
         for (auto&i:callbacks_create_swapchain)
             i();
         return VK_SUCCESS;
