@@ -1,5 +1,6 @@
 #include "VulkanAppLauncher.h"
 #include "../Demos/VulkanTests/BuffersAndPictureTest.h"
+#include "../Demos/DemoManager.h"
 
 VulkanAppLauncher& VulkanAppLauncher::getSingleton(VkExtent2D size, bool fullScreen, bool isResizable, bool limitFrameRate) {
     static VulkanAppLauncher singletonInstance(size, fullScreen, isResizable, limitFrameRate);
@@ -49,8 +50,10 @@ bool VulkanAppLauncher::init_vulkan() {
     }
     VulkanCore::get_singleton().get_vulkan_device().add_device_extension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-    // 创建Vulkan实例
+    // 获取Vulkan版本
     VulkanCore::get_singleton().get_vulkan_instance().use_latest_api_version();
+
+    // 创建Vulkan实例
     auto api_version = VulkanCore::get_singleton().get_vulkan_instance().get_api_version();
     if (VulkanCore::get_singleton().get_vulkan_instance().create_instance())
         return false;
@@ -70,6 +73,27 @@ bool VulkanAppLauncher::init_vulkan() {
         VulkanCore::get_singleton().determine_physical_device(0,true,false) ||
         VulkanCore::get_singleton().get_vulkan_device().create_device(api_version))
         return false;
+
+    // 检查版本开启无图像帧缓冲功能
+    if (VulkanCore::get_singleton().get_vulkan_instance().get_api_version() < VK_API_VERSION_1_1) {
+        outstream << std::format("[ VulkanAppLauncher ] ERROR\nVulkan is not supported on this machine!\n");
+        return false;
+    }
+    if (VulkanCore::get_singleton().get_vulkan_instance().get_api_version() < VK_API_VERSION_1_2) {
+        VulkanCore::get_singleton().get_vulkan_device().add_device_extension(VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME);
+        VulkanCore::get_singleton().get_vulkan_device().add_device_extension(VK_KHR_IMAGELESS_FRAMEBUFFER_EXTENSION_NAME);
+        VkPhysicalDeviceImagelessFramebufferFeatures physical_device_imageless_framebuffer_features = {
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGELESS_FRAMEBUFFER_FEATURES,
+        };
+        VulkanCore::get_singleton().get_vulkan_device().add_next_structure_physical_device_features(physical_device_imageless_framebuffer_features);
+        if (!physical_device_imageless_framebuffer_features.imagelessFramebuffer)
+            return -1;
+    }
+    else {
+        if (!VulkanCore::get_singleton().get_vulkan_device().get_physical_device_vulkan12_features().imagelessFramebuffer)
+            return -1;
+
+    }
 
     // 创建交换链
     if (VulkanSwapchainManager::get_singleton().create_swapchain())
@@ -105,24 +129,23 @@ bool VulkanAppLauncher::init_window() {
 void VulkanAppLauncher::main_loop() {
     // 初始化场景管理系统
     if (!DemoManager::get_singleton().initialize(window)) {
-        outstream << "Failed to initialize demo manager!\n";
+        outstream << std::format("[ MainLoop ]\nFailed to initialize demo manager!\n");
         return;
     }
 
     // 创建并切换到默认场景
     auto default_demo = std::make_unique<BuffersAndPictureTest>();
     if (!DemoManager::get_singleton().switch_to_demo(std::move(default_demo))) {
-        outstream << "Failed to switch to default demo!\n";
+        outstream << std::format("[ MainLoop ]\nFailed to switch to default demo!\n");
         return;
     }
 
     // 运行主循环
     DemoManager::get_singleton().run_main_loop();
-
 }
 
 void VulkanAppLauncher::cleanup() {
-    VulkanPipelineManager::get_singleton().clear_rpwf_screen();
+    VulkanPipelineManager::get_singleton().clear_all_rpwf();
     VulkanSwapchainManager::get_singleton().destroy_singleton();
     VulkanCore::get_singleton().destroy_singleton();
 }

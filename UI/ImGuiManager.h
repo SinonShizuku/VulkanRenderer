@@ -15,8 +15,6 @@ public:
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-
-        show_all_components(show_demo_window);
     }
 
     void render(const VkCommandBuffer &command_buffer) {
@@ -38,18 +36,5 @@ public:
 private:
     void show_all_components(bool &show_demo_window) {
         ImGui::ShowDemoWindow(&show_demo_window);
-
-        if (ImGui::BeginMainMenuBar()) {
-            if (ImGui::BeginMenu("File")) {
-                if (ImGui::MenuItem("Open", "Ctrl+O")) { /* 打开文件操作 */ }
-                if (ImGui::MenuItem("Save", "Ctrl+S")) { /* 保存文件操作 */ }
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Edit")) {
-                if (ImGui::MenuItem("Undo", "Ctrl+Z")) { /* 撤销操作 */ }
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
-        }
     }
 };

@@ -80,5 +80,10 @@ struct RenderPassWithFramebuffers {
     std::vector<VulkanFramebuffer> framebuffers;
 };
 
+struct RenderPassWithFramebuffer {
+    VulkanRenderPass render_pass;
+    VulkanFramebuffer framebuffer;
+};
+
 
 

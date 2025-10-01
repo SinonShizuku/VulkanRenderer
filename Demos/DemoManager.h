@@ -1,6 +1,15 @@
 #pragma once
-#include "DemoBase.h"
 #include "../UI/ImGuiManager.h"
+#include <magic_enum/magic_enum.hpp>
+#include <unordered_map>
+#include <functional>
+#include <memory>
+
+#include "VulkanTests/BuffersAndPictureTest.h"
+#include "VulkanTests/ImagelessFramebufferTest.h"
+#include "DemoCategories.h"
+#include "SharedResourceManager.h"
+#include "DemoBase.h"
 
 class DemoManager {
 public:
@@ -9,18 +18,75 @@ public:
         return singleton;
     }
 
+    void initialize_demos() {
+        implemented_demos["BuffersAndPictureTest"] = []() {
+            return std::make_unique<BuffersAndPictureTest>();
+        };
+
+        implemented_demos["ImagelessFramebufferTest"] = []() {
+            return std::make_unique<ImagelessFramebufferTest>();
+        };
+
+    }
+
     bool initialize(GLFWwindow* window) {
         this->window = window;
         if (!SharedResourceManager::get_singleton().initialize(window)) {
             return false;
         }
+        initialize_demos();
         return initialize_imgui();
+    }
+
+
+    void show_shared_ui_components(bool &show_demo_window) {
+        ImGui::ShowDemoWindow(&show_demo_window);
+        if (ImGui::BeginMainMenuBar()) {
+            // 文件菜单
+            if (ImGui::BeginMenu("File")) {
+                if (ImGui::MenuItem("Exit", "Alt+F4")) {
+                    glfwSetWindowShouldClose(window, true);
+                }
+                ImGui::EndMenu();
+            }
+
+            for (auto category: demos) {
+                auto category_name = category.first;
+                if (ImGui::BeginMenu(category_name.c_str())) {
+                    for (auto type : category.second) {
+                        if (ImGui::MenuItem(type.c_str())) {
+                            auto it = implemented_demos.find(type);
+                            if (it != implemented_demos.end()) {
+                                std::unique_ptr<DemoBase> demo = it->second();
+                                request_demo_switch(std::move(demo));
+                            }
+                        }
+                    }
+                    ImGui::EndMenu();
+                }
+            }
+
+            // 显示当前demo信息
+            if (current_demo) {
+                std::string demo_info = "Current Demo: " + current_demo->get_type();
+                ImVec2 textSize = ImGui::CalcTextSize(demo_info.c_str());
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - textSize.x);
+                ImGui::Text("%s", demo_info.c_str());
+            }
+
+            ImGui::EndMainMenuBar();
+        }
+    }
+
+    void request_demo_switch(std::unique_ptr<DemoBase> new_demo) {
+        pending_demo_switch = true;
+        new_demo_request = std::move(new_demo);
     }
 
     bool switch_to_demo(std::unique_ptr<DemoBase> new_demo) {
         // 等待GPU完成当前操作
         if (current_demo) {
-            SharedResourceManager::get_singleton().get_shared_fence().wait_and_reset();
+            // SharedResourceManager::get_singleton().get_shared_fence().wait_and_reset();
             current_demo->cleanup_scene_resources();
         }
 
@@ -43,8 +109,18 @@ public:
         while (!glfwWindowShouldClose(window)) {
             while (glfwGetWindowAttrib(window, GLFW_ICONIFIED))
                 glfwWaitEvents();
+                
+            // 显示共享UI组件（菜单栏等）
             ImGuiManager::get_singleton().imgui_new_frame(show_demo_window);
+            show_shared_ui_components(show_demo_window);
+            // 显示当前demo的UI组件
             current_demo->render_ui();
+
+            // 检查是否有demo切换请求
+            if (pending_demo_switch) {
+                switch_to_demo(std::move(new_demo_request));
+                pending_demo_switch = false;
+            }
 
             VulkanSwapchainManager::get_singleton().swap_image(
                 shared_resources.get_semaphore_image_is_available()
@@ -73,10 +149,18 @@ public:
 private:
     GLFWwindow* window = nullptr;
     std::unique_ptr<DemoBase> current_demo;
+    std::unordered_map<DemoType, std::function<std::unique_ptr<DemoBase>()>> implemented_demos;
+
+    bool pending_demo_switch = false;
+    std::unique_ptr<DemoBase> new_demo_request;
+
+
+    // 辅助函数：检查demo是否已实现
+    bool is_demo_implemented(DemoType demo_type) {
+        return implemented_demos.find(demo_type) != implemented_demos.end();
+    }
 
     bool initialize_imgui() {
-        const auto& rpwf = VulkanPipelineManager::get_singleton().create_rpwf_screen();
-
         // 初始化ImGui
         ImGuiManager::get_singleton().init_basic_config();
 
@@ -89,7 +173,7 @@ private:
         init_info.Queue = VulkanCore::get_singleton().get_vulkan_device().get_queue_graphics();
         init_info.PipelineCache = VK_NULL_HANDLE;
         init_info.DescriptorPool = SharedResourceManager::get_singleton().get_imgui_descriptor_pool();
-        init_info.RenderPass = rpwf.render_pass;
+        init_info.RenderPass = SharedResourceManager::get_singleton().get_render_pass_imgui();
         init_info.Subpass = 0;
         init_info.MinImageCount = VulkanSwapchainManager::get_singleton().get_swapchain_create_info().minImageCount;
         init_info.ImageCount = VulkanSwapchainManager::get_singleton().get_swapchain_image_count();
@@ -97,6 +181,12 @@ private:
         init_info.CheckVkResultFn = nullptr;
 
         return ImGui_ImplVulkan_Init(&init_info);
+    }
+
+    void shutdown_imgui() {
+        ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
     }
 
     void update_fps_title() {
@@ -109,7 +199,7 @@ private:
         dframe++;
         if ((dt = time1 - time0) >= 1) {
             info.precision(1);
-            info << "Vulkan Renderer - " << (current_demo ? current_demo->get_name() : "未选择场景")
+            info << "Vulkan Renderer - " << (current_demo ? current_demo->get_type() : "未选择场景")
                  << "    " << std::fixed << dframe / dt << " FPS";
             glfwSetWindowTitle(window, info.str().c_str());
             info.str("");
@@ -118,5 +208,3 @@ private:
         }
     }
 };
-
-

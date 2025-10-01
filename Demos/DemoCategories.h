@@ -11,39 +11,18 @@ enum class DemoCategoryType {
     CUSTOM_CATEGORY_2
 };
 
-enum class DemoType {
-    // Vulkan功能测试
-    BuffersAndPictureTest,
-    VULKAN_DEVICE_TEST,
-    VULKAN_BUFFER_TEST,
-    VULKAN_TEXTURE_TEST,
+using DemoType = std::string;
 
-    // 基础实现
-    FIRST_TRIANGLE,
-    INDEXED_TRIANGLE,
-    COLORED_TRIANGLE,
-    UNIFORM_BUFFER_TRIANGLE,
+inline std::unordered_map<std::string,std::vector<DemoType>> demos = {
+    // Vulkan Tests
+    {"VULKAN_TESTS",
+        {
+        "BuffersAndPictureTest",
+        "ImagelessFramebufferTest",
+        "VULKAN_BUFFER_TEST",
+        "VULKAN_TEXTURE_TEST"
+        }
+    }
 
-    // 光栅化
-    WIREFRAME_RENDERING,
-    TEXTURE_MAPPING,
-    PHONG_LIGHTING,
-    SHADOW_MAPPING,
-
-    // PBR光线追踪
-    BASIC_RAY_TRACING,
-    PBR_MATERIALS,
-    GLOBAL_ILLUMINATION,
-    DENOISING,
-
-    // 预留扩展
-    CUSTOM_SCENE_START = 1000
 };
 
-struct DemoInfo {
-    DemoType type;
-    DemoCategoryType category;
-    std::string name;
-    std::string description;
-    bool is_implemented = false;
-};

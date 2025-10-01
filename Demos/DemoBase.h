@@ -14,8 +14,8 @@
 
 class DemoBase {
 public:
-    DemoBase(DemoType type, DemoCategoryType category, const std::string& name, const std::string& description = "")
-           : scene_type(type), scene_category(category), scene_name(name), scene_description(description) {}
+    DemoBase(DemoType type, DemoCategoryType category,  const std::string& description = "")
+           : scene_type(type), scene_category(category),  scene_description(description) {}
 
     virtual ~DemoBase() = default;
 
@@ -30,7 +30,6 @@ public:
     // Getter
     DemoType get_type() const { return scene_type; }
     DemoCategoryType get_category() const { return scene_category; }
-    const std::string& get_name() const { return scene_name; }
     const std::string& get_description() const { return scene_description; }
     VkCommandBuffer get_command_buffer() const { return command_buffer; }
 
@@ -38,7 +37,6 @@ public:
 protected:
     DemoType scene_type;
     DemoCategoryType scene_category;
-    std::string scene_name;
     std::string scene_description;
 
     // vulkan pipeline
@@ -57,6 +55,14 @@ protected:
 
     static const auto& get_shared_framebuffers() {
         return VulkanPipelineManager::get_singleton().get_rpwf_screen().framebuffers;
+    }
+
+    static const auto& get_shared_render_pass_imageless_framebuffer() {
+        return VulkanPipelineManager::get_singleton().get_rpwf_screen_imageless_framebuffer().render_pass;
+    }
+
+    static const auto& get_shared_imageless_framebuffer() {
+        return VulkanPipelineManager::get_singleton().get_rpwf_screen_imageless_framebuffer().framebuffer;
     }
 
     bool allocate_command_buffer() {

@@ -7,18 +7,20 @@
 #include "../../VulkanBase/components/VulkanBuffers.h"
 
 
-class BuffersAndPictureTest : public DemoBase {
+class ImagelessFramebufferTest : public DemoBase {
 public:
-    BuffersAndPictureTest()
-    : DemoBase("BuffersAndPictureTest", DemoCategoryType::VULKAN_TESTS, "")
+    ImagelessFramebufferTest()
+    : DemoBase("ImagelessFramebufferTest", DemoCategoryType::VULKAN_TESTS, "")
     {}
-    ~BuffersAndPictureTest() override = default;
+    ~ImagelessFramebufferTest() override = default;
 
     bool initialize_scene_resources() override {
         allocate_command_buffer();
         if (!create_pipeline_layout() || !create_pipeline()) {
             return false;
         }
+
+
 
         texture_vertex vertices[] = {
             { { -1.f, -1.f }, { 0, 0 } },
@@ -30,7 +32,7 @@ public:
         vertex_buffer->transfer_data(vertices);
 
         texture_image = std::make_unique<VulkanTexture2D>(
-            "../Assets/mainpage.png",
+            "../Assets/ImagenessFramebuffer.png",
             VK_FORMAT_R8G8B8A8_UNORM,
             VK_FORMAT_R8G8B8A8_UNORM,
             true
@@ -46,7 +48,7 @@ public:
     }
 
     void cleanup_scene_resources() override {
-        // SharedResourceManager::get_singleton().get_shared_fence().wait_and_reset();
+        SharedResourceManager::get_singleton().get_shared_fence().wait_and_reset();
         // 清理资源
         descriptor_set.reset();
         descriptor_pool.reset();
@@ -63,8 +65,8 @@ public:
     }
 
     void render_frame() override {
-        auto& shared_framebuffers = get_shared_framebuffers();
-        auto& shared_render_pass = get_shared_render_pass();
+        auto& imageless_framebuffer = get_shared_imageless_framebuffer();
+        auto& render_pass = get_shared_render_pass_imageless_framebuffer();
         auto& imgui_render_pass = SharedResourceManager::get_singleton().get_render_pass_imgui();
         auto& imgui_framebuffers = SharedResourceManager::get_singleton().get_framebuffers_imgui();
         auto current_image_index = VulkanSwapchainManager::get_singleton().get_current_image_index();
@@ -73,9 +75,21 @@ public:
 
         command_buffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         {
-            // 屏幕部分rpwf
-            shared_render_pass.cmd_begin(command_buffer, shared_framebuffers[current_image_index],
-                                       {{}, window_size}, clear_color);
+            VkImageView attachment = VulkanSwapchainManager::get_singleton().get_swapchain_image_view(current_image_index);
+            VkRenderPassAttachmentBeginInfo attachment_begin_info = {
+                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO,
+                .attachmentCount = 1,
+                .pAttachments = &attachment
+            };
+            VkRenderPassBeginInfo render_pass_begin_info = {
+                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                .pNext = &attachment_begin_info,
+                .framebuffer = imageless_framebuffer,
+                .renderArea = {{}, window_size},
+                .clearValueCount = 1,
+                .pClearValues = &clear_color
+            };
+            render_pass.cmd_begin(command_buffer, render_pass_begin_info);
             {
                 // 绑定资源
                 VkDeviceSize offset = 0;
@@ -87,7 +101,7 @@ public:
                 // 绘制
                 vkCmdDraw(command_buffer, 4, 1, 0, 0);
             }
-            shared_render_pass.cmd_end(command_buffer);
+            render_pass.cmd_end(command_buffer);
 
             // imgui rpwf
             imgui_render_pass.cmd_begin(command_buffer, imgui_framebuffers[current_image_index],
@@ -99,7 +113,7 @@ public:
     }
 
     void render_ui() override {
-        if (ImGui::Begin("Testing buffers and texture: ")) {
+        if (ImGui::Begin("Demo Information: ")) {
             ImGui::Text("current demo: %s", get_type().c_str());
             ImGui::Text("description: %s", get_description().c_str());
 
@@ -148,7 +162,7 @@ private:
         auto create = [&] {
             GraphicsPipelineCreateInfoPack pipeline_create_info_pack;
             pipeline_create_info_pack.create_info.layout = pipeline_layout;
-            pipeline_create_info_pack.create_info.renderPass = get_shared_render_pass();
+            pipeline_create_info_pack.create_info.renderPass = get_shared_render_pass_imageless_framebuffer();
             // 子通道只有一个，pipeline_create_info_pack.createInfo.renderPass使用默认值0
 
             // vertex buffer

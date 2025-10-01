@@ -25,6 +25,7 @@ public:
             VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
         );
 
+        initialize_rpwf();
         return initialize_imgui_resources();
     }
 
@@ -35,6 +36,12 @@ public:
     VulkanCommandPool& get_command_pool() { return *command_pool; }
     VulkanDescriptorPool& get_imgui_descriptor_pool() { return *imgui_descriptor_pool; }
     GLFWwindow* get_window() { return window; }
+    static const VulkanRenderPass& get_render_pass() { return VulkanPipelineManager::get_singleton().get_rpwf_screen().render_pass;}
+    static const VulkanRenderPass& get_render_pass_imageless_framebuffer() { return VulkanPipelineManager::get_singleton().get_rpwf_screen_imageless_framebuffer().render_pass;}
+    static const VulkanRenderPass& get_render_pass_imgui() { return VulkanPipelineManager::get_singleton().get_rpwf_imgui().render_pass;}
+    static const std::vector<VulkanFramebuffer> &get_framebuffers() { return VulkanPipelineManager::get_singleton().get_rpwf_screen().framebuffers; }
+    static const std::vector<VulkanFramebuffer> &get_framebuffers_imgui() { return VulkanPipelineManager::get_singleton().get_rpwf_imgui().framebuffers; }
+    static const VulkanFramebuffer &get_imageless_framebuffer() { return VulkanPipelineManager::get_singleton().get_rpwf_screen_imageless_framebuffer().framebuffer; }
 
 private:
     GLFWwindow* window = nullptr;
@@ -49,6 +56,14 @@ private:
 
     // ImGui资源
     std::unique_ptr<VulkanDescriptorPool> imgui_descriptor_pool;
+
+
+    void initialize_rpwf() {
+        VulkanPipelineManager::get_singleton().create_rpwf_screen_imageless_framebuffer();
+        VulkanPipelineManager::get_singleton().create_rpwf_screen();
+        VulkanPipelineManager::get_singleton().create_rpwf_imgui();
+    }
+
 
     bool initialize_imgui_resources() {
         // ImGui描述符池配置
