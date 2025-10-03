@@ -4,7 +4,7 @@
 
 #include "../../VulkanBase/components/VulkanTexture.h"
 #include "../../VulkanBase/components/VulkanSampler.h"
-#include "../../VulkanBase/components/VulkanBuffers.h"
+#include "../../VulkanBase/components/VulkanMemory.h"
 
 
 class BuffersAndPictureTest : public DemoBase {
@@ -89,7 +89,7 @@ public:
             }
             shared_render_pass.cmd_end(command_buffer);
 
-            // imgui rpwf
+            // imgui rpwf_imageless
             imgui_render_pass.cmd_begin(command_buffer, imgui_framebuffers[current_image_index],
                 {{}, window_size}, clear_color);
             ImGuiManager::get_singleton().render(command_buffer);
@@ -146,6 +146,7 @@ private:
             frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)
         };
         auto create = [&] {
+            if (current_demo_name != "BuffersAndPictureTest") return false;
             GraphicsPipelineCreateInfoPack pipeline_create_info_pack;
             pipeline_create_info_pack.create_info.layout = pipeline_layout;
             pipeline_create_info_pack.create_info.renderPass = get_shared_render_pass();
@@ -179,6 +180,7 @@ private:
             return true;
         };
         auto destroy = [this] {
+            if (current_demo_name != "BuffersAndPictureTest") return;
             pipeline.~VulkanPipeline();
         };
         VulkanSwapchainManager::get_singleton().add_callback_create_swapchain(create);

@@ -701,3 +701,108 @@ public:
     }
 };
 
+class VulkanAttachment {
+protected:
+    VulkanImageView image_view;
+    VulkanImageMemory image_memory;
+    VulkanAttachment() = default;
+public:
+    // getter
+    VkImageView get_image_view() const {
+        return image_view;
+    }
+    VkImage get_image() const {
+        return image_memory.Image();
+    }
+    const VkImageView* get_address_of_image_view() {
+        return  image_view.Address();
+    }
+    const VkImage* get_address_of_image() {
+        return  image_memory.get_address_of_image();
+    }
+
+    // const function
+    VkDescriptorImageInfo get_descriptor_image_info(VkSampler sampler) const {
+        return {
+            .sampler = sampler,
+            .imageView = image_view,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        };
+    }
+};
+
+class VulkanColorAttachment : public VulkanAttachment {
+public:
+    VulkanColorAttachment() = default;
+    VulkanColorAttachment(VkFormat format, VkExtent2D extent, uint32_t layer_count = 1,
+        VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT, VkImageUsageFlags other_usages = 0) {
+        create(format, extent, layer_count, sample_count, other_usages);
+    }
+
+    // non-const function
+    void create(VkFormat format, VkExtent2D extent, uint32_t layer_count = 1,
+        VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT, VkImageUsageFlags other_usages = 0) {
+        VkImageCreateInfo image_create_info = {
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = format,
+            .extent = {extent.width, extent.height, 1},
+            .mipLevels = 1,
+            .arrayLayers = layer_count,
+            .samples = sample_count,
+            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | other_usages,
+        };
+        image_memory.create(image_create_info,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | bool(other_usages & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT) * VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);
+        image_view.create(image_memory.Image(),
+            layer_count>1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D,
+            format,
+            {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, layer_count}
+            );
+    }
+
+    // static function
+    static bool format_availability(VkFormat format, bool support_blending = true) {
+        return VulkanCore::get_singleton().get_vulkan_device().get_format_properties(format).optimalTilingFeatures &
+            VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT << uint32_t(support_blending);
+    }
+
+};
+
+class VulkanDepthStencilAttachment: public VulkanAttachment {
+public:
+    VulkanDepthStencilAttachment() = default;
+    VulkanDepthStencilAttachment(VkFormat format, VkExtent2D extent, uint32_t layer_count = 1,
+        VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT, VkImageUsageFlags other_usages = 0, bool stencil_only = false) {
+        create(format, extent, layer_count, sample_count, other_usages, stencil_only);
+    }
+
+    // non-const function
+    void create(VkFormat format, VkExtent2D extent, uint32_t layer_count = 1,
+        VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT, VkImageUsageFlags other_usages = 0, bool stencil_only = false) {
+        VkImageCreateInfo image_create_info = {
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = format,
+            .extent = {extent.height, extent.width, 1},
+            .mipLevels = 1,
+            .arrayLayers = layer_count,
+            .samples = sample_count,
+            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | other_usages,
+        };
+        image_memory.create(image_create_info,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | bool(other_usages & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT) * VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);
+        VkImageAspectFlags aspect_flags = (!stencil_only) * VK_IMAGE_ASPECT_DEPTH_BIT;
+        if (format > VK_FORMAT_S8_UINT) aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        else if (format == VK_FORMAT_S8_UINT) aspect_flags = VK_IMAGE_ASPECT_STENCIL_BIT;
+        image_view.create(image_memory.Image(),
+            layer_count>1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D,
+            format,
+            {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, layer_count}
+            );
+    }
+
+    static bool format_availability(VkFormat format) {
+        return VulkanCore::get_singleton().get_vulkan_device().get_format_properties(format).optimalTilingFeatures &
+            VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+ };
+

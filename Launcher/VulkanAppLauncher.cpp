@@ -89,6 +89,15 @@ bool VulkanAppLauncher::init_vulkan() {
         if (!physical_device_imageless_framebuffer_features.imagelessFramebuffer)
             return -1;
     }
+    if (VulkanCore::get_singleton().get_vulkan_instance().get_api_version() < VK_API_VERSION_1_3) {
+        VulkanCore::get_singleton().get_vulkan_device().add_device_extension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+        VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features = {
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
+        };
+        VulkanCore::get_singleton().get_vulkan_device().add_next_structure_physical_device_features(dynamic_rendering_features);
+        if (!dynamic_rendering_features.dynamicRendering)
+            return -1;
+    }
     else {
         if (!VulkanCore::get_singleton().get_vulkan_device().get_physical_device_vulkan12_features().imagelessFramebuffer)
             return -1;

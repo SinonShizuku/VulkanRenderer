@@ -98,6 +98,11 @@ public:
     void add_callback_destroy_swapchain(std::function<void()> function) {
         callbacks_destroy_swapchain.push_back(std::move(function));
     }
+    
+    void clear_all_callbacks() {
+        callbacks_create_swapchain.clear();
+        callbacks_destroy_swapchain.clear();
+    }
 
     result_t wait_idle() const {
         result_t result = vkDeviceWaitIdle(vulkan_device->get_device());

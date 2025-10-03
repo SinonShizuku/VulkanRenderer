@@ -41,7 +41,7 @@ add_executable(VulkanRenderer main.cpp
         VulkanBase/components/VulkanPipepline.h
         Demos/SharedResourceManager.h
         VulkanBase/components/VulkanShaderModule.h
-        VulkanBase/components/VulkanBuffers.h
+        VulkanBase/components/VulkanMemory.h
         Geometry/Vertex.h
         VulkanBase/components/VulkanDescriptor.h
         Interaction/Texture.h
@@ -56,6 +56,8 @@ add_executable(VulkanRenderer main.cpp
         Demos/DemoBase.h
         Demos/VulkanTests/BuffersAndPictureTest.h
         Demos/VulkanTests/ImagelessFramebufferTest.h
+        Demos/VulkanTests/DynamicRenderingTest.h
+        Demos/VulkanTests/OffScreenRenderingTest.h
 )
 
 target_sources(VulkanRenderer PRIVATE

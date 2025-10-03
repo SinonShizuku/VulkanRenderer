@@ -8,7 +8,7 @@
 #include "../VulkanBase/components/VulkanSync.h"
 #include "../VulkanBase/components/VulkanPipepline.h"
 #include "../VulkanBase/components/VulkanShaderModule.h"
-#include "../VulkanBase/components/VulkanBuffers.h"
+#include "../VulkanBase/components/VulkanMemory.h"
 #include "../Geometry/Vertex.h"
 #include "../VulkanBase/components/VulkanDescriptor.h"
 #include "../VulkanBase/components/VulkanTexture.h"
@@ -21,6 +21,7 @@ public:
     static VulkanAppLauncher& getSingleton(VkExtent2D size = {800, 600}, bool fullScreen = false, bool isResizable = true, bool limitFrameRate = false);
     ~VulkanAppLauncher() = default;
     void run();
+
 
 private:
     VulkanAppLauncher(VkExtent2D size, bool fullScreen, bool isResizable, bool limitFrameRate);

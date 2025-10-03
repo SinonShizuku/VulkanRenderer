@@ -20,11 +20,19 @@ public:
     }
 
     const auto& get_rpwf_screen() {
-        return rpwfs;
+        return rpwf;
     }
 
     const auto& get_rpwf_screen_imageless_framebuffer() {
-        return rpwf;
+        return rpwf_imageless;
+    }
+
+    const auto& get_rpwf_offscreen() {
+        return rpwf_offscreen;
+    }
+
+    const auto& get_ca_canvas() {
+        return ca_canvas;
     }
 
     const auto& create_rpwf_screen() {
@@ -59,13 +67,13 @@ public:
             .dependencyCount = 1,
             .pDependencies = &subpass_dependency
         };
-        rpwfs.render_pass.create(render_pass_create_info);
+        rpwf.render_pass.create(render_pass_create_info);
 
         auto create_frame_buffers = [] {
             size_t image_count = VulkanSwapchainManager::get_singleton().get_swapchain_image_count();
-            rpwfs.framebuffers.resize(image_count);
+            rpwf.framebuffers.resize(image_count);
             VkFramebufferCreateInfo framebuffer_create_info = {
-                .renderPass = rpwfs.render_pass,
+                .renderPass = rpwf.render_pass,
                 .attachmentCount = 1,
                 .width = window_size.width,
                 .height = window_size.height,
@@ -74,31 +82,31 @@ public:
             for (auto i = 0; i < image_count; i++) {
                 VkImageView attachment = VulkanSwapchainManager::get_singleton().get_swapchain_image_views()[i];
                 framebuffer_create_info.pAttachments = &attachment;
-                rpwfs.framebuffers[i].create(framebuffer_create_info);
+                rpwf.framebuffers[i].create(framebuffer_create_info);
             }
         };
 
         auto destroy_framebuffers = [] {
-            for (auto &framebuffer : rpwfs.framebuffers) {
+            for (auto &framebuffer : rpwf.framebuffers) {
                 framebuffer.clear();
             }
-            rpwfs.framebuffers.clear();
+            rpwf.framebuffers.clear();
         };
         create_frame_buffers();
 
-        ExecuteOnce(rpwfs);
+        ExecuteOnce(rpwf);
 
         VulkanSwapchainManager::get_singleton().add_callback_create_swapchain(create_frame_buffers);
         VulkanSwapchainManager::get_singleton().add_callback_destroy_swapchain(destroy_framebuffers);
-        return rpwfs;
+        return rpwf;
     }
 
     void clear_rpwf_screen() {
-        rpwfs.render_pass.clear();
-        for (auto &framebuffer : rpwfs.framebuffers) {
+        rpwf.render_pass.clear();
+        for (auto &framebuffer : rpwf.framebuffers) {
             framebuffer.clear();
         }
-        rpwfs.framebuffers.clear();
+        rpwf.framebuffers.clear();
     }
 
     const auto& create_rpwf_imgui() {
@@ -207,7 +215,7 @@ public:
             .dependencyCount = 1,
             .pDependencies = &subpass_dependency
         };
-        rpwf.render_pass.create(render_pass_create_info);
+        rpwf_imageless.render_pass.create(render_pass_create_info);
 
         // 待填充
         auto create_framebuffer = [] {
@@ -234,39 +242,136 @@ public:
             VkFramebufferCreateInfo framebuffer_create_info = {
                 .pNext = &framebuffer_attachments_create_info,
                 .flags = VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT,
-                .renderPass = rpwf.render_pass,
+                .renderPass = rpwf_imageless.render_pass,
                 .attachmentCount = 1,
                 .width = window_size.width,
                 .height = window_size.height,
                 .layers = 1
             };
-            rpwf.framebuffer.create(framebuffer_create_info);
+            rpwf_imageless.framebuffer.create(framebuffer_create_info);
         };
         auto destroy_framebuffer = [] {
-            rpwf.framebuffer.~VulkanFramebuffer();
+            rpwf_imageless.framebuffer.~VulkanFramebuffer();
         };
         create_framebuffer();
 
-        ExecuteOnce(rpwf);
+        ExecuteOnce(rpwf_imageless);
         VulkanSwapchainManager::get_singleton().add_callback_create_swapchain(create_framebuffer);
         VulkanSwapchainManager::get_singleton().add_callback_destroy_swapchain(destroy_framebuffer);
 
-        return rpwf;
+        return rpwf_imageless;
     }
 
     void clear_rpwf_screen_imagelss_framebuffer() {
-        rpwf.render_pass.clear();
-        rpwf.framebuffer.clear();
+        rpwf_imageless.render_pass.clear();
+        rpwf_imageless.framebuffer.clear();
+    }
+
+    const auto& create_rpwf_offscreen(VkExtent2D canvas_size) {
+        ca_canvas.create(VulkanSwapchainManager::get_singleton().get_swapchain_create_info().imageFormat, canvas_size,
+            1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+
+        VkAttachmentDescription attachment_description = {
+            .format = VulkanSwapchainManager::get_singleton().get_swapchain_create_info().imageFormat,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            .finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+         };
+
+        VkSubpassDependency subpass_dependencies[2] = {
+            {
+                .srcSubpass = VK_SUBPASS_EXTERNAL,
+                .dstSubpass = 0,
+                .srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .srcAccessMask = 0,
+                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+            },
+            {
+                .srcSubpass = 0,
+                .dstSubpass = VK_SUBPASS_EXTERNAL,
+                .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+            }
+        };
+        VkAttachmentReference attachment_reference = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+        VkSubpassDescription subpass_description = {
+            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+            .colorAttachmentCount = 1,
+            .pColorAttachments = &attachment_reference
+        };
+        VkRenderPassCreateInfo render_pass_create_info = {
+            .attachmentCount = 1,
+            .pAttachments = &attachment_description,
+            .subpassCount = 1,
+            .pSubpasses = &subpass_description,
+            .dependencyCount = 2,
+            .pDependencies = subpass_dependencies,
+        };
+        rpwf_offscreen.render_pass.create(render_pass_create_info);
+        VkFramebufferCreateInfo framebuffer_create_info = {
+            .renderPass = rpwf_offscreen.render_pass,
+            .attachmentCount = 1,
+            .pAttachments = ca_canvas.get_address_of_image_view(),
+            .width = canvas_size.width,
+            .height = canvas_size.height,
+            .layers = 1
+        };
+        rpwf_offscreen.framebuffer.create(framebuffer_create_info);
+        return rpwf_offscreen;
+    }
+
+    void clear_rpwf_offcreen() {
+        rpwf_offscreen.render_pass.clear();
+        rpwf_offscreen.framebuffer.clear();
     }
 
     void clear_all_rpwf() {
         clear_rpwf_screen();
         clear_rpwf_imgui();
         clear_rpwf_screen_imagelss_framebuffer();
+        clear_rpwf_offcreen();
+    }
+
+    void cmd_clear_canvas(VkCommandBuffer command_buffer, VkClearColorValue clear_color_value) {
+        VkImageSubresourceRange imageSubresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+        VkImageMemoryBarrier imageMemoryBarrier = {
+            VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            nullptr,
+            0,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_QUEUE_FAMILY_IGNORED,
+            VK_QUEUE_FAMILY_IGNORED,
+            ca_canvas.get_image(),
+            imageSubresourceRange
+        };
+        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+            0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
+
+        vkCmdClearColorImage(command_buffer, ca_canvas.get_image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color_value, 1, &imageSubresourceRange);
+
+        imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        imageMemoryBarrier.dstAccessMask = 0;
+        imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0,
+            0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
     }
 private:
-    inline static RenderPassWithFramebuffers rpwfs;
+    inline static RenderPassWithFramebuffers rpwf;
     inline static RenderPassWithFramebuffers rpwf_imgui;
-    inline static RenderPassWithFramebuffer rpwf;
+    inline static RenderPassWithFramebuffer rpwf_imageless;
+    inline static RenderPassWithFramebuffer rpwf_offscreen;
+    inline static VulkanColorAttachment ca_canvas;
 
 };

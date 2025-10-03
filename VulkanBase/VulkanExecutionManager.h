@@ -6,7 +6,7 @@
 #include "components/VulkanSync.h"
 #include "../Interaction/Texture.h"
 #include "components/VulkanOperation.h"
-#include "components/VulkanBuffers.h"
+#include "components/VulkanMemory.h"
 
 
 

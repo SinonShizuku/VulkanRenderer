@@ -7,6 +7,8 @@
 
 #include "VulkanTests/BuffersAndPictureTest.h"
 #include "VulkanTests/ImagelessFramebufferTest.h"
+#include "VulkanTests/DynamicRenderingTest.h"
+#include "VulkanTests/OffScreenRenderingTest.h"
 #include "DemoCategories.h"
 #include "SharedResourceManager.h"
 #include "DemoBase.h"
@@ -20,12 +22,22 @@ public:
 
     void initialize_demos() {
         implemented_demos["BuffersAndPictureTest"] = []() {
-            return std::make_unique<BuffersAndPictureTest>();
+            return std::make_unique<BuffersAndPictureTest>();;
         };
 
         implemented_demos["ImagelessFramebufferTest"] = []() {
             return std::make_unique<ImagelessFramebufferTest>();
         };
+
+        implemented_demos["DynamicRenderingTest"] = []() {
+            return std::make_unique<DynamicRenderingTest>();;
+        };
+
+        // implemented_demos["OffScreenRenderingTest"] = [this]() {
+        //     auto demo = std::make_unique<OffScreenRenderingTest>();
+        //     demo->set_window(window);
+        //     return demo;
+        // };
 
     }
 
@@ -58,7 +70,7 @@ public:
                             auto it = implemented_demos.find(type);
                             if (it != implemented_demos.end()) {
                                 std::unique_ptr<DemoBase> demo = it->second();
-                                request_demo_switch(std::move(demo));
+                                if (request_demo_switch(std::move(demo))) current_demo_name = type;
                             }
                         }
                     }
@@ -78,9 +90,27 @@ public:
         }
     }
 
-    void request_demo_switch(std::unique_ptr<DemoBase> new_demo) {
+    bool request_demo_switch(std::unique_ptr<DemoBase> new_demo) {
+        bool show_popup = true;
+        if (new_demo->get_type()=="DynamicRenderingTest" && VulkanCore::get_singleton().get_vulkan_instance().get_api_version() < VK_API_VERSION_1_2) {
+            if (show_popup) {
+                ImGui::OpenPopup("Warning");
+            }
+            if (ImGui::BeginPopupModal("Warning", &show_popup)) {
+                ImGui::Text("Vulkan api version < 1.3, cannot activate dynamic rendering!");
+                if (ImGui::Button("Back")) {
+                    show_popup = false;
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+            return false;
+        }
+        VulkanPipelineManager::get_singleton().clear_all_rpwf();
+        SharedResourceManager::get_singleton().initialize_rpwf();
         pending_demo_switch = true;
         new_demo_request = std::move(new_demo);
+        return true;
     }
 
     bool switch_to_demo(std::unique_ptr<DemoBase> new_demo) {
@@ -91,7 +121,12 @@ public:
         }
 
         if (current_demo = std::move(new_demo)) {
-            return current_demo->initialize_scene_resources();
+            bool result = current_demo->initialize_scene_resources();
+            if (result) {
+                // Register new demo's swapchain callbacks
+                current_demo->register_swapchain_callbacks();
+            }
+            return result;
         }
 
         return true;

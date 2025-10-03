@@ -19,10 +19,12 @@ inline std::unordered_map<std::string,std::vector<DemoType>> demos = {
         {
         "BuffersAndPictureTest",
         "ImagelessFramebufferTest",
-        "VULKAN_BUFFER_TEST",
-        "VULKAN_TEXTURE_TEST"
+        "DynamicRenderingTest",
+        "OffScreenRenderingTest"
         }
     }
 
 };
+
+inline std::string current_demo_name = "BuffersAndPictureTest";
 

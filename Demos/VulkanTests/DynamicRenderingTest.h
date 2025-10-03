@@ -7,20 +7,18 @@
 #include "../../VulkanBase/components/VulkanMemory.h"
 
 
-class ImagelessFramebufferTest : public DemoBase {
+class DynamicRenderingTest : public DemoBase {
 public:
-    ImagelessFramebufferTest()
-    : DemoBase("ImagelessFramebufferTest", DemoCategoryType::VULKAN_TESTS, "")
+    DynamicRenderingTest()
+    : DemoBase("DynamicRenderingTest", DemoCategoryType::VULKAN_TESTS, "")
     {}
-    ~ImagelessFramebufferTest() override = default;
+    ~DynamicRenderingTest() override = default;
 
     bool initialize_scene_resources() override {
         allocate_command_buffer();
         if (!create_pipeline_layout() || !create_pipeline()) {
             return false;
         }
-
-
 
         texture_vertex vertices[] = {
             { { -1.f, -1.f }, { 0, 0 } },
@@ -32,7 +30,7 @@ public:
         vertex_buffer->transfer_data(vertices);
 
         texture_image = std::make_unique<VulkanTexture2D>(
-            "../Assets/ImagelessFramebuffer.png",
+            "../Assets/DynamicRendering.png",
             VK_FORMAT_R8G8B8A8_UNORM,
             VK_FORMAT_R8G8B8A8_UNORM,
             true
@@ -48,7 +46,6 @@ public:
     }
 
     void cleanup_scene_resources() override {
-        // SharedResourceManager::get_singleton().get_shared_fence().wait_and_reset();
         // 清理资源
         descriptor_set.reset();
         descriptor_pool.reset();
@@ -65,8 +62,13 @@ public:
     }
 
     void render_frame() override {
-        auto& imageless_framebuffer = get_shared_imageless_framebuffer();
-        auto& render_pass = get_shared_render_pass_imageless_framebuffer();
+        PFN_vkCmdBeginRenderingKHR vkCmdBeginRendering = ::vkCmdBeginRendering;
+        PFN_vkCmdEndRenderingKHR vkCmdEndRendering = ::vkCmdEndRendering;
+        if (VulkanCore::get_singleton().get_vulkan_instance().get_api_version() < VK_API_VERSION_1_3) {
+            vkCmdBeginRendering = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(vkGetDeviceProcAddr(VulkanCore::get_singleton().get_vulkan_device().get_device(), "vkCmdBeginRenderingKHR"));
+            vkCmdEndRendering = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(vkGetDeviceProcAddr(VulkanCore::get_singleton().get_vulkan_device().get_device(), "vkCmdEndRenderingKHR"));
+        }
+
         auto& imgui_render_pass = SharedResourceManager::get_singleton().get_render_pass_imgui();
         auto& imgui_framebuffers = SharedResourceManager::get_singleton().get_framebuffers_imgui();
         auto current_image_index = VulkanSwapchainManager::get_singleton().get_current_image_index();
@@ -75,21 +77,48 @@ public:
 
         command_buffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         {
+            VkImageMemoryBarrier image_memory_barrier = {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                .pNext = nullptr,
+                .srcAccessMask = 0,
+                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = VulkanSwapchainManager::get_singleton().get_swapchain_image(current_image_index),
+                .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
+            };
+            vkCmdPipelineBarrier(
+                command_buffer,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_DEPENDENCY_BY_REGION_BIT,
+                0, nullptr,
+                0, nullptr,
+                1, &image_memory_barrier);
+
+
             VkImageView attachment = VulkanSwapchainManager::get_singleton().get_swapchain_image_view(current_image_index);
-            VkRenderPassAttachmentBeginInfo attachment_begin_info = {
-                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO,
-                .attachmentCount = 1,
-                .pAttachments = &attachment
+            VkRenderingAttachmentInfo color_attachment_info = {
+                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+                .imageView = attachment,
+                .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                .clearValue = clear_color
             };
-            VkRenderPassBeginInfo render_pass_begin_info = {
-                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-                .pNext = &attachment_begin_info,
-                .framebuffer = imageless_framebuffer,
-                .renderArea = {{}, window_size},
-                .clearValueCount = 1,
-                .pClearValues = &clear_color
+            VkRenderingInfo rendering_info = {
+                .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+                .renderArea = {{}, window_size}, // 和之前一样
+                .layerCount = 1,
+                .colorAttachmentCount = 1,
+                .pColorAttachments = &color_attachment_info,
+                .pDepthAttachment = nullptr,
+                .pStencilAttachment = nullptr
             };
-            render_pass.cmd_begin(command_buffer, render_pass_begin_info);
+
+            vkCmdBeginRendering(command_buffer, &rendering_info);
             {
                 // 绑定资源
                 VkDeviceSize offset = 0;
@@ -101,13 +130,27 @@ public:
                 // 绘制
                 vkCmdDraw(command_buffer, 4, 1, 0, 0);
             }
-            render_pass.cmd_end(command_buffer);
+            vkCmdEndRendering(command_buffer);
+
+            image_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            image_memory_barrier.dstAccessMask = 0;
+            image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            vkCmdPipelineBarrier(
+                command_buffer,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                VK_DEPENDENCY_BY_REGION_BIT,
+                0, nullptr,
+                0, nullptr,
+                1, &image_memory_barrier);
 
             // imgui rpwf_imageless
             imgui_render_pass.cmd_begin(command_buffer, imgui_framebuffers[current_image_index],
                 {{}, window_size}, clear_color);
             ImGuiManager::get_singleton().render(command_buffer);
             imgui_render_pass.cmd_end(command_buffer);
+
         }
         command_buffer.end();
     }
@@ -160,10 +203,16 @@ private:
             frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)
         };
         auto create = [&] {
-            if (current_demo_name != "ImagelessFramebufferTest") return false;
+            if (current_demo_name != "DynamicRenderingTest") return false;
+            VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
+                .colorAttachmentCount = 1,
+                .pColorAttachmentFormats = &VulkanSwapchainManager::get_singleton().get_swapchain_create_info().imageFormat
+            };
             GraphicsPipelineCreateInfoPack pipeline_create_info_pack;
+            pipeline_create_info_pack.create_info.pNext = &pipeline_rendering_create_info;
             pipeline_create_info_pack.create_info.layout = pipeline_layout;
-            pipeline_create_info_pack.create_info.renderPass = get_shared_render_pass_imageless_framebuffer();
+            // pipeline_create_info_pack.create_info.renderPass = get_shared_render_pass_imageless_framebuffer();
             // 子通道只有一个，pipeline_create_info_pack.createInfo.renderPass使用默认值0
 
             // vertex buffer
@@ -194,7 +243,7 @@ private:
             return true;
         };
         auto destroy = [this] {
-            if (current_demo_name != "ImagelessFramebufferTest") return;
+            if (current_demo_name != "DynamicRenderingTest") return;
             pipeline.~VulkanPipeline();
         };
         VulkanSwapchainManager::get_singleton().add_callback_create_swapchain(create);
