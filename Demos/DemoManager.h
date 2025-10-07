@@ -1,17 +1,20 @@
 #pragma once
-#include "../UI/ImGuiManager.h"
 #include <magic_enum/magic_enum.hpp>
 #include <unordered_map>
 #include <functional>
 #include <memory>
 
+#include "../UI/ImGuiManager.h"
+#include "DemoCategories.h"
+#include "SharedResourceManager.h"
+#include "DemoBase.h"
+
+// demos
 #include "VulkanTests/BuffersAndPictureTest.h"
 #include "VulkanTests/ImagelessFramebufferTest.h"
 #include "VulkanTests/DynamicRenderingTest.h"
 #include "VulkanTests/OffScreenRenderingTest.h"
-#include "DemoCategories.h"
-#include "SharedResourceManager.h"
-#include "DemoBase.h"
+#include "VulkanTests/DepthAttachmentTest.h"
 
 class DemoManager {
 public:
@@ -38,6 +41,10 @@ public:
         //     demo->set_window(window);
         //     return demo;
         // };
+
+        implemented_demos["DepthAttachmentTest"] = []() {
+            return std::make_unique<DepthAttachmentTest>();;
+        };
 
     }
 
@@ -106,8 +113,8 @@ public:
             }
             return false;
         }
-        VulkanPipelineManager::get_singleton().clear_all_rpwf();
-        SharedResourceManager::get_singleton().initialize_rpwf();
+        // VulkanPipelineManager::get_singleton().clear_all_rpwf();
+        // SharedResourceManager::get_singleton().initialize_rpwf();
         pending_demo_switch = true;
         new_demo_request = std::move(new_demo);
         return true;
@@ -121,12 +128,7 @@ public:
         }
 
         if (current_demo = std::move(new_demo)) {
-            bool result = current_demo->initialize_scene_resources();
-            if (result) {
-                // Register new demo's swapchain callbacks
-                current_demo->register_swapchain_callbacks();
-            }
-            return result;
+            return current_demo->initialize_scene_resources();
         }
 
         return true;
@@ -149,7 +151,7 @@ public:
             ImGuiManager::get_singleton().imgui_new_frame(show_demo_window);
             show_shared_ui_components(show_demo_window);
             // 显示当前demo的UI组件
-            current_demo->render_ui();
+            current_demo->show_demo_basic_info();
 
             // 检查是否有demo切换请求
             if (pending_demo_switch) {

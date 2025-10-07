@@ -63,10 +63,7 @@ public:
     }
 
     void render_frame() override {
-        auto& shared_framebuffers = get_shared_framebuffers();
-        auto& shared_render_pass = get_shared_render_pass();
-        auto& imgui_render_pass = SharedResourceManager::get_singleton().get_render_pass_imgui();
-        auto& imgui_framebuffers = SharedResourceManager::get_singleton().get_framebuffers_imgui();
+        const auto& [render_pass, framebuffers] = VulkanPipelineManager::get_singleton().get_rpwf_screen();
         auto current_image_index = VulkanSwapchainManager::get_singleton().get_current_image_index();
 
         VkClearValue clear_color = { .color = { 1.f, 1.f, 1.f, 1.f } };
@@ -74,7 +71,7 @@ public:
         command_buffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
         {
             // 屏幕部分rpwf
-            shared_render_pass.cmd_begin(command_buffer, shared_framebuffers[current_image_index],
+            render_pass.cmd_begin(command_buffer, framebuffers[current_image_index],
                                        {{}, window_size}, clear_color);
             {
                 // 绑定资源
@@ -87,25 +84,14 @@ public:
                 // 绘制
                 vkCmdDraw(command_buffer, 4, 1, 0, 0);
             }
-            shared_render_pass.cmd_end(command_buffer);
+            render_pass.cmd_end(command_buffer);
 
-            // imgui rpwf_imageless
-            imgui_render_pass.cmd_begin(command_buffer, imgui_framebuffers[current_image_index],
-                {{}, window_size}, clear_color);
-            ImGuiManager::get_singleton().render(command_buffer);
-            imgui_render_pass.cmd_end(command_buffer);
+            // imgui rpwf
+            imgui_render(current_image_index,clear_color);
         }
         command_buffer.end();
     }
 
-    void render_ui() override {
-        if (ImGui::Begin("Testing buffers and texture: ")) {
-            ImGui::Text("current demo: %s", get_type().c_str());
-            ImGui::Text("description: %s", get_description().c_str());
-
-        }
-        ImGui::End();
-    }
 
 
 private:

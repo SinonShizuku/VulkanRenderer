@@ -23,9 +23,15 @@ public:
     virtual bool initialize_scene_resources() = 0;
     virtual void cleanup_scene_resources() = 0;
     virtual void render_frame() = 0;
-    virtual void render_ui() {}
+    void show_demo_basic_info() {
+        if (ImGui::Begin("Basic info: ")) {
+            ImGui::Text("current demo: %s", get_type().c_str());
+            ImGui::Text("description: %s", get_description().c_str());
 
-    virtual void on_window_resize(uint32_t width, uint32_t height) {}
+        }
+        ImGui::End();
+    }
+
 
     // Getter
     DemoType get_type() const { return scene_type; }
@@ -35,30 +41,6 @@ public:
 
     // Setter
     void set_window(GLFWwindow *window) { this->window = window; }
-
-    // Swapchain callback management
-    void add_swapchain_create_callback(std::function<void()> create_callback) {
-        swapchain_create_callbacks.push_back(std::move(create_callback));
-    }
-    
-    void add_swapchain_destroy_callback(std::function<void()> destroy_callback) {
-        swapchain_destroy_callbacks.push_back(std::move(destroy_callback));
-    }
-    
-    void register_swapchain_callbacks() {
-        for (auto& callback : swapchain_create_callbacks) {
-            VulkanSwapchainManager::get_singleton().add_callback_create_swapchain(callback);
-        }
-        for (auto& callback : swapchain_destroy_callbacks) {
-            VulkanSwapchainManager::get_singleton().add_callback_destroy_swapchain(callback);
-        }
-    }
-    
-    void clear_swapchain_callbacks() {
-        // Clear all swapchain callbacks from the manager since we can't identify specific ones
-        VulkanSwapchainManager::get_singleton().clear_all_callbacks();
-    }
-
 
 protected:
     GLFWwindow *window;
@@ -76,36 +58,18 @@ protected:
     // vulkan command buffer
     VulkanCommandBuffer command_buffer;
 
-    // swapchain callbacks for this demo
-    std::vector<std::function<void()>> swapchain_create_callbacks;
-    std::vector<std::function<void()>> swapchain_destroy_callbacks;
-    
-    // callback ID management
-    std::vector<uint64_t> registered_callback_ids;
-    static inline uint64_t next_callback_id = 0;
+    const RenderPassWithFramebuffers& imgui_rpwf = VulkanPipelineManager::get_singleton().get_rpwf_imgui();
 
     static const auto& get_shared_render_pass() {
         return VulkanPipelineManager::get_singleton().get_rpwf_screen().render_pass;
-    }
-
-    static const auto& get_shared_framebuffers() {
-        return VulkanPipelineManager::get_singleton().get_rpwf_screen().framebuffers;
     }
 
     static const auto& get_shared_render_pass_imageless_framebuffer() {
         return VulkanPipelineManager::get_singleton().get_rpwf_screen_imageless_framebuffer().render_pass;
     }
 
-    static const auto& get_shared_imageless_framebuffer() {
-        return VulkanPipelineManager::get_singleton().get_rpwf_screen_imageless_framebuffer().framebuffer;
-    }
-
     static const auto& get_shared_render_pass_offscreen() {
         return VulkanPipelineManager::get_singleton().get_rpwf_offscreen().render_pass;
-    }
-
-    static const auto& get_shared_framebuffer_offscreen() {
-        return VulkanPipelineManager::get_singleton().get_rpwf_offscreen().framebuffer;
     }
 
     bool allocate_command_buffer() {
@@ -114,6 +78,14 @@ protected:
 
     void free_command_buffer() {
         SharedResourceManager::get_singleton().get_command_pool().free_buffers(command_buffer);
+    }
+
+    void imgui_render(uint32_t i, array_ref<const VkClearValue>clear_values) {
+        const auto &[imgui_render_pass, imgui_framebuffers] = imgui_rpwf;
+        imgui_render_pass.cmd_begin(command_buffer, imgui_framebuffers[i],
+                {{}, window_size}, clear_values);
+        ImGuiManager::get_singleton().render(command_buffer);
+        imgui_render_pass.cmd_end(command_buffer);
     }
 
 };

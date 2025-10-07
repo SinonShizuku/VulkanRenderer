@@ -48,11 +48,15 @@ public:
     static const VulkanRenderPass& get_render_pass_offscreen() { return VulkanPipelineManager::get_singleton().get_rpwf_offscreen().render_pass;}
     static const VulkanFramebuffer &get_framebuffers_offscreen() { return VulkanPipelineManager::get_singleton().get_rpwf_offscreen().framebuffer; }
 
+    static const VulkanRenderPass& get_render_pass_ds() { return VulkanPipelineManager::get_singleton().get_rpwf_ds().render_pass;}
+    static const std::vector<VulkanFramebuffer>& get_framebuffers_ds() { return VulkanPipelineManager::get_singleton().get_rpwf_ds().framebuffers;}
+
     void initialize_rpwf() {
         VulkanPipelineManager::get_singleton().create_rpwf_screen_imageless_framebuffer();
         VulkanPipelineManager::get_singleton().create_rpwf_screen();
         VulkanPipelineManager::get_singleton().create_rpwf_imgui();
         VulkanPipelineManager::get_singleton().create_rpwf_offscreen(window_size);
+        VulkanPipelineManager::get_singleton().create_rpwf_ds();
     }
 
 private:

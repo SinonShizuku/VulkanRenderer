@@ -20,7 +20,8 @@ inline std::unordered_map<std::string,std::vector<DemoType>> demos = {
         "BuffersAndPictureTest",
         "ImagelessFramebufferTest",
         "DynamicRenderingTest",
-        "OffScreenRenderingTest"
+        "OffScreenRenderingTest",
+            "DepthAttachmentTest"
         }
     }
 

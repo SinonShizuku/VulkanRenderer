@@ -58,6 +58,7 @@ add_executable(VulkanRenderer main.cpp
         Demos/VulkanTests/ImagelessFramebufferTest.h
         Demos/VulkanTests/DynamicRenderingTest.h
         Demos/VulkanTests/OffScreenRenderingTest.h
+        Demos/VulkanTests/DepthAttachmentTest.h
 )
 
 target_sources(VulkanRenderer PRIVATE

@@ -55,12 +55,8 @@ public:
     }
 
     void render_frame() override {
-        auto& shared_framebuffers = get_shared_framebuffers();
-        auto& shared_render_pass = get_shared_render_pass();
-        auto& imgui_render_pass = SharedResourceManager::get_singleton().get_render_pass_imgui();
-        auto& imgui_framebuffers = SharedResourceManager::get_singleton().get_framebuffers_imgui();
-        auto& offscreen_render_pass = SharedResourceManager::get_singleton().get_render_pass_offscreen();
-        auto& offscreen_framebuffer = SharedResourceManager::get_singleton().get_framebuffers_offscreen();
+        const auto& [render_pass, framebuffers] = VulkanPipelineManager::get_singleton().get_rpwf_screen();
+        const auto& [offscreen_render_pass, offscreen_framebuffer] = VulkanPipelineManager::get_singleton().get_rpwf_offscreen();
 
         auto current_image_index = VulkanSwapchainManager::get_singleton().get_current_image_index();
 
@@ -82,7 +78,7 @@ public:
             offscreen_render_pass.cmd_end(command_buffer);
 
             // 屏幕部分rpwf
-            shared_render_pass.cmd_begin(command_buffer, shared_framebuffers[current_image_index],
+            render_pass.cmd_begin(command_buffer, framebuffers[current_image_index],
                                        {{}, window_size}, clear_color);
             {
                 vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -99,27 +95,15 @@ public:
                 vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, descriptor_set->Address(), 0, nullptr);
                 vkCmdDraw(command_buffer, 4, 1, 0, 0);
             }
-            shared_render_pass.cmd_end(command_buffer);
+            render_pass.cmd_end(command_buffer);
 
             // imgui rpwf
-            imgui_render_pass.cmd_begin(command_buffer, imgui_framebuffers[current_image_index],
-                {{}, window_size}, clear_color);
-            ImGuiManager::get_singleton().render(command_buffer);
-            imgui_render_pass.cmd_end(command_buffer);
+            imgui_render(current_image_index,clear_color);
         }
         command_buffer.end();
         glfwGetCursorPos(window, &mouseX, &mouseY);
         push_constants_offscreen.offsets[canvas_index = !canvas_index] = { mouseX, mouseY };
         clear_canvas = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-    }
-
-    void render_ui() override {
-        if (ImGui::Begin("Testing buffers and texture: ")) {
-            ImGui::Text("current demo: %s", get_type().c_str());
-            ImGui::Text("description: %s", get_description().c_str());
-
-        }
-        ImGui::End();
     }
 
 
@@ -207,6 +191,7 @@ private:
             frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)
         };
         auto create = [&] {
+            if (current_demo_name != "OffScreenRenderingTest") return false;
             GraphicsPipelineCreateInfoPack pipeline_create_info_pack;
             pipeline_create_info_pack.create_info.layout = pipeline_layout;
             pipeline_create_info_pack.create_info.renderPass = get_shared_render_pass();
@@ -223,10 +208,11 @@ private:
 
         };
         auto destroy = [this] {
+            if (current_demo_name != "OffScreenRenderingTest") return;
             pipeline.~VulkanPipeline();
         };
-        add_swapchain_create_callback(create);
-        add_swapchain_destroy_callback(destroy);
+        VulkanSwapchainManager::get_singleton().add_callback_create_swapchain(create);
+        VulkanSwapchainManager::get_singleton().add_callback_destroy_swapchain(destroy);
         return create();
     }
 

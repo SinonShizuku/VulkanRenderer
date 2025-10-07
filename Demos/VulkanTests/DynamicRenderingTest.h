@@ -69,8 +69,6 @@ public:
             vkCmdEndRendering = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(vkGetDeviceProcAddr(VulkanCore::get_singleton().get_vulkan_device().get_device(), "vkCmdEndRenderingKHR"));
         }
 
-        auto& imgui_render_pass = SharedResourceManager::get_singleton().get_render_pass_imgui();
-        auto& imgui_framebuffers = SharedResourceManager::get_singleton().get_framebuffers_imgui();
         auto current_image_index = VulkanSwapchainManager::get_singleton().get_current_image_index();
 
         VkClearValue clear_color = { .color = { 1.f, 1.f, 1.f, 1.f } };
@@ -145,23 +143,10 @@ public:
                 0, nullptr,
                 1, &image_memory_barrier);
 
-            // imgui rpwf_imageless
-            imgui_render_pass.cmd_begin(command_buffer, imgui_framebuffers[current_image_index],
-                {{}, window_size}, clear_color);
-            ImGuiManager::get_singleton().render(command_buffer);
-            imgui_render_pass.cmd_end(command_buffer);
-
+            // imgui rpwf
+            imgui_render(current_image_index,clear_color);
         }
         command_buffer.end();
-    }
-
-    void render_ui() override {
-        if (ImGui::Begin("Demo Information: ")) {
-            ImGui::Text("current demo: %s", get_type().c_str());
-            ImGui::Text("description: %s", get_description().c_str());
-
-        }
-        ImGui::End();
     }
 
 
