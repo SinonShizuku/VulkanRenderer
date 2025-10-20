@@ -36,7 +36,7 @@ public:
         vkCmdBeginRenderPass(command_buffer, &begin_info, subpass_contents);
     }
 
-    void cmd_next(VkCommandBuffer command_buffer, VkRenderPassBeginInfo &begin_info, VkSubpassContents subpass_contents = VK_SUBPASS_CONTENTS_INLINE) const {
+    void cmd_next(VkCommandBuffer command_buffer, VkSubpassContents subpass_contents = VK_SUBPASS_CONTENTS_INLINE) const {
         vkCmdNextSubpass(command_buffer, subpass_contents);
     }
 

@@ -15,6 +15,7 @@
 #include "VulkanTests/DynamicRenderingTest.h"
 #include "VulkanTests/OffScreenRenderingTest.h"
 #include "VulkanTests/DepthAttachmentTest.h"
+#include "VulkanTests/DeferredRenderingTest.h"
 
 class DemoManager {
 public:
@@ -44,6 +45,10 @@ public:
 
         implemented_demos["DepthAttachmentTest"] = []() {
             return std::make_unique<DepthAttachmentTest>();;
+        };
+
+        implemented_demos["DeferredRenderingTest"] = []() {
+            return std::make_unique<DeferredRenderingTest>();;
         };
 
     }

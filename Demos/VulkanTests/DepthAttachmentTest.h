@@ -100,6 +100,7 @@ public:
         const auto& [render_pass, framebuffers] = VulkanPipelineManager::get_singleton().get_rpwf_ds();
         auto current_image_index = VulkanSwapchainManager::get_singleton().get_current_image_index();
 
+        // Use a conventional perspective projection without flipping Y axis
         glm::mat4 proj = flip_vertical(glm::infinitePerspectiveLH_ZO(glm::radians(60.f), float(window_size.width) / window_size.height, 5.f));
         VkClearValue clear_values[2] = {
             {.color = { 1.f, 1.f, 1.f, 1.f }},
@@ -146,17 +147,16 @@ private:
 
     bool create_pipeline() {
         static VulkanShaderModule vert("../Shader/Into3D.vert.spv");
-        static VulkanShaderModule frag("../Shader/Into3D.frag.spv");
+        static VulkanShaderModule frag("../Shader/Into3d_visualizeDepth.frag.spv");
         static VkPipelineShaderStageCreateInfo shader_stage_create_infos[2] = {
             vert.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),
             frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)
         };
         auto create = [&] {
             if (current_demo_name != "DepthAttachmentTest") return false;
-            GraphicsPipelineCreateInfoPack pipeline_create_info_pack;
+            static GraphicsPipelineCreateInfoPack pipeline_create_info_pack;
             pipeline_create_info_pack.create_info.layout = pipeline_layout;
-            pipeline_create_info_pack.create_info.renderPass = SharedResourceManager::get_singleton().get_render_pass_ds();
-
+            pipeline_create_info_pack.create_info.renderPass = VulkanPipelineManager::get_singleton().get_rpwf_ds().render_pass;
 
             // vertex buffer
             pipeline_create_info_pack.vertex_input_bindings.emplace_back(0, sizeof(vertex3D), VK_VERTEX_INPUT_RATE_VERTEX);
@@ -179,7 +179,7 @@ private:
             // 深度测试
             pipeline_create_info_pack.depth_stencil_state_create_info.depthTestEnable = VK_TRUE;
             pipeline_create_info_pack.depth_stencil_state_create_info.depthWriteEnable = VK_TRUE;
-            pipeline_create_info_pack.depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
+            pipeline_create_info_pack.depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_NEVER;
 
             pipeline_create_info_pack.color_blend_attachment_states.push_back({ .colorWriteMask = 0b1111 });
             pipeline_create_info_pack.update_all_arrays();

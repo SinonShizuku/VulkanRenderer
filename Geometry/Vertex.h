@@ -29,6 +29,12 @@ struct vertex3D {
     glm::vec4 color;
 };
 
+struct vertex3D_1 {
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec4 albedo_specular;
+};
+
 // func
 inline glm::mat4 flip_vertical(const glm::mat4& projection) {
     glm::mat4 _projection = projection;

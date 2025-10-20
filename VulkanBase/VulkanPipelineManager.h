@@ -39,6 +39,22 @@ public:
         return rpwf_ds;
     }
 
+    const auto& get_rpwf_deferred_to_screen() {
+        return rpwf_deferred_to_screen;
+    }
+
+    [[nodiscard]] const VulkanColorAttachment & get_ca_deferred_to_screen_normal_z() const {
+        return ca_deferred_to_screen_normalZ;
+    }
+
+    [[nodiscard]] const VulkanColorAttachment & get_ca_deferred_to_screen_albedo_specular() const {
+        return ca_deferred_to_screen_albedo_specular;
+    }
+
+    [[nodiscard]] const VulkanDepthStencilAttachment & get_dsa_deferred_to_screen() const {
+        return dsa_deferred_to_screen;
+    }
+
     const auto& create_rpwf_screen() {
         VkAttachmentDescription attachment_description = {
             .format = VulkanSwapchainManager::get_singleton().get_swapchain_create_info().imageFormat,
@@ -423,11 +439,157 @@ public:
         return rpwf_ds;
     }
 
+    void clear_rpwf_ds() {
+        rpwf_ds.render_pass.clear();
+        rpwf_ds.framebuffers.clear();
+    }
+
+    const auto& create_rpwf_deferred_to_screen(VkFormat depth_stencil_format = VK_FORMAT_D24_UNORM_S8_UINT) {
+        _depth_stencil_format = depth_stencil_format;
+        VkAttachmentDescription attachment_description[4] = {
+            {
+                .format = VulkanSwapchainManager::get_singleton().get_swapchain_create_info().imageFormat,
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+            },
+            {
+                .format = VK_FORMAT_R16G16B16A16_SFLOAT,
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            },
+            {
+                .format = VK_FORMAT_R8G8B8A8_UNORM,
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            },
+            {
+                .format = _depth_stencil_format,
+                .samples = VK_SAMPLE_COUNT_1_BIT,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .stencilLoadOp = _depth_stencil_format >= VK_FORMAT_S8_UINT ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            }
+        };
+
+        VkAttachmentReference attachment_references_subpass0[3] = {
+            {1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}, // normalZ
+            {2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}, // specular & albedo
+            {3, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL} // depth
+        };
+        VkAttachmentReference attachment_references_subpass1[3] = {
+            {1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, // normalZ
+            {2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, // specular & albedo
+            {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL } // swapchain image
+        };
+        VkSubpassDescription subpass_description[2] = {
+            { // 第一个子通道，生成G-Buffer
+                .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+                .colorAttachmentCount = 2,
+                .pColorAttachments = attachment_references_subpass0,
+                .pDepthStencilAttachment = attachment_references_subpass0 + 2
+            },
+            { // 第二个子通道，进行composition
+                .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+                .inputAttachmentCount = 2,
+                .pInputAttachments = attachment_references_subpass1,
+                .colorAttachmentCount = 1,
+                .pColorAttachments = attachment_references_subpass1 + 2
+            }
+        };
+        VkSubpassDependency subpass_dependency[2] = {
+            {
+                .srcSubpass = VK_SUBPASS_EXTERNAL,
+                .dstSubpass = 0,
+                .srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                .srcAccessMask = 0,
+                .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+            },
+            {
+                .srcSubpass = 0,
+                .dstSubpass = 1,
+                .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
+                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+            }
+        };
+        VkRenderPassCreateInfo render_pass_create_info = {
+            .attachmentCount = 4,
+            .pAttachments = attachment_description,
+            .subpassCount = 2,
+            .pSubpasses = subpass_description,
+            .dependencyCount = 2,
+            .pDependencies = subpass_dependency
+        };
+        rpwf_deferred_to_screen.render_pass.create(render_pass_create_info);
+
+        auto create_framebuffers = [&]() {
+            rpwf_deferred_to_screen.framebuffers.resize(VulkanSwapchainManager::get_singleton().get_swapchain_image_count());
+            ca_deferred_to_screen_normalZ.create(VK_FORMAT_R16G16B16A16_SFLOAT,window_size,1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
+            ca_deferred_to_screen_albedo_specular.create(VK_FORMAT_R8G8B8A8_UNORM,window_size,1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
+            dsa_deferred_to_screen.create(_depth_stencil_format,window_size,1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
+            VkImageView attachment[4] = {
+                VK_NULL_HANDLE,
+                ca_deferred_to_screen_normalZ.get_image_view(),
+                ca_deferred_to_screen_albedo_specular.get_image_view(),
+                dsa_deferred_to_screen.get_image_view()
+            };
+            VkFramebufferCreateInfo framebuffer_create_info = {
+                .renderPass = rpwf_deferred_to_screen.render_pass,
+                .attachmentCount = 4,
+                .pAttachments = attachment,
+                .width = window_size.width,
+                .height = window_size.height,
+                .layers = 1
+            };
+            for (size_t i = 0; i < VulkanSwapchainManager::get_singleton().get_swapchain_image_count(); i++) {
+                attachment[0] = VulkanSwapchainManager::get_singleton().get_swapchain_image_view(i);
+                rpwf_deferred_to_screen.framebuffers[i].create(framebuffer_create_info);
+            }
+        };
+        auto destory_framebuffers = [this] {
+            ca_deferred_to_screen_normalZ.~VulkanColorAttachment();
+            ca_deferred_to_screen_albedo_specular.~VulkanColorAttachment();
+            dsa_deferred_to_screen.~VulkanDepthStencilAttachment();
+            rpwf_deferred_to_screen.framebuffers.clear();
+        };
+        create_framebuffers();
+
+        ExecuteOnce(rpwf_deferred_to_screen);
+        VulkanSwapchainManager::get_singleton().add_callback_create_swapchain(create_framebuffers);
+        VulkanSwapchainManager::get_singleton().add_callback_destroy_swapchain(destory_framebuffers);
+        return rpwf_deferred_to_screen;
+    }
+
+    void clear_rpwf_deferred_to_screen() {
+        rpwf_deferred_to_screen.render_pass.clear();
+        rpwf_deferred_to_screen.framebuffers.clear();
+    }
+
     void clear_all_rpwf() {
         clear_rpwf_screen();
         clear_rpwf_imgui();
         clear_rpwf_screen_imagelss_framebuffer();
         clear_rpwf_offcreen();
+        clear_rpwf_ds();
+        clear_rpwf_deferred_to_screen();
     }
 
     void cmd_clear_canvas(VkCommandBuffer command_buffer, VkClearColorValue clear_color_value) {
@@ -456,15 +618,24 @@ public:
         vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0,
             0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
     }
+
+
 private:
     inline static RenderPassWithFramebuffers rpwf;
     inline static RenderPassWithFramebuffers rpwf_imgui;
     inline static RenderPassWithFramebuffer rpwf_imageless;
     inline static RenderPassWithFramebuffer rpwf_offscreen;
+    inline static RenderPassWithFramebuffers rpwf_deferred_to_screen;
     inline static VulkanColorAttachment ca_canvas;
 
     std::vector<VulkanDepthStencilAttachment>dsas_screen_with_ds;
     inline static RenderPassWithFramebuffers rpwf_ds;
     inline static VkFormat _depth_stencil_format;
+
+
+    VulkanDepthStencilAttachment dsa_deferred_to_screen;
+    VulkanColorAttachment ca_deferred_to_screen_normalZ;
+    VulkanColorAttachment ca_deferred_to_screen_albedo_specular;
+
 
 };
