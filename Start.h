@@ -20,6 +20,9 @@
 #include <functional>
 #include <thread>
 #include <mutex>
+#include <filesystem>
+
+const std::filesystem::path G_PROJECT_ROOT = PROJECT_ROOT_PATH;
 
 // GLM
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

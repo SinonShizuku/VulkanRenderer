@@ -404,6 +404,40 @@ public:
             .dependencyCount = 1,
             .pDependencies = &subpass_dependency,
         };
+
+        // ==========================================================
+        // [ DEBUG BLOCK START ]
+        // ==========================================================
+        static bool render_pass_debug_printed = false;
+        if (!render_pass_debug_printed) {
+            std::cout << std::endl << "--- RenderPass Creation Debug (create_rpwf_ds) ---" << std::endl;
+
+            // 1. 检查 subpass 0 的 pDepthStencilAttachment 指针
+            if (render_pass_create_info.pSubpasses[0].pDepthStencilAttachment != nullptr) {
+
+                std::cout << "[PASS] Subpass 0: pDepthStencilAttachment is NOT NULL." << std::endl;
+
+                // 2. 检查它指向的 attachment 索引
+                uint32_t depth_attachment_index = render_pass_create_info.pSubpasses[0].pDepthStencilAttachment->attachment;
+                std::cout << "  -> Points to Attachment Index: " << depth_attachment_index << std::endl;
+
+                if (depth_attachment_index == 1) {
+                    std::cout << "[PASS] Index 1 matches attachment_description[1] (Depth)." << std::endl;
+                } else {
+                    std::cout << "[FAIL] Index is " << depth_attachment_index << ", but expected 1!" << std::endl;
+                }
+
+            } else {
+                std::cout << "[FAIL] Subpass 0: pDepthStencilAttachment IS NULL." << std::endl;
+                std::cout << "  !!! THIS WOULD CAUSE THE BUG !!!" << std::endl;
+            }
+            std::cout << "----------------------------------------------------" << std::endl << std::endl;
+            render_pass_debug_printed = true;
+        }
+        // ==========================================================
+        // [ DEBUG BLOCK END ]
+        // ==========================================================
+
         rpwf_ds.render_pass.create(render_pass_create_info);
         auto create_framebuffers = [this] {
             dsas_screen_with_ds.resize(VulkanSwapchainManager::get_singleton().get_swapchain_image_count());

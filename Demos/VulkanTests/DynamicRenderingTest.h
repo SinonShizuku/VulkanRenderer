@@ -177,8 +177,8 @@ private:
     }
 
     bool create_pipeline() {
-        static VulkanShaderModule vert("../Shader/Texture.vert.spv");
-        static VulkanShaderModule frag("../Shader/Texture.frag.spv");
+        static VulkanShaderModule vert(get_shader_path("Texture.vert.spv").string().c_str());
+        static VulkanShaderModule frag(get_shader_path("Texture.frag.spv").string().c_str());
         // static VkPipelineShaderStageCreateInfo shader_stage_create_infos_triangle[2] = {
         //     vert.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),
         //     frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)

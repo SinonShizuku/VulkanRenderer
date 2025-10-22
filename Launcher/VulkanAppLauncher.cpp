@@ -221,8 +221,8 @@ void VulkanAppLauncher::create_pipeline_layout_with_texture() {
 }
 
 void VulkanAppLauncher::create_pipeline() {
-    static VulkanShaderModule vert("../Shader/Texture.vert.spv");
-    static VulkanShaderModule frag("../Shader/Texture.frag.spv");
+    static VulkanShaderModule vert("Shader/Texture.vert.spv");
+    static VulkanShaderModule frag("Shader/Texture.frag.spv");
     // static VkPipelineShaderStageCreateInfo shader_stage_create_infos_triangle[2] = {
     //     vert.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),
     //     frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)

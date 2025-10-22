@@ -146,8 +146,11 @@ private:
     }
 
     bool create_pipeline() {
-        static VulkanShaderModule vert("../Shader/Into3D.vert.spv");
-        static VulkanShaderModule frag("../Shader/Into3d_visualizeDepth.frag.spv");
+        // static VulkanShaderModule vert("Shader/Into3D.vert.spv");
+        // static VulkanShaderModule frag("Shader/Into3d_visualizeDepth.frag.spv");
+        f_compile_glsl_to_spv f_compile;
+        static VulkanShaderModule vert = create_shader_module_from_glsl(f_compile, get_shader_path("Into3D.vert.shader").string().c_str());
+        static VulkanShaderModule frag = create_shader_module_from_glsl(f_compile, get_shader_path("Into3D.frag.shader").string().c_str());;
         static VkPipelineShaderStageCreateInfo shader_stage_create_infos[2] = {
             vert.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),
             frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -179,7 +182,7 @@ private:
             // 深度测试
             pipeline_create_info_pack.depth_stencil_state_create_info.depthTestEnable = VK_TRUE;
             pipeline_create_info_pack.depth_stencil_state_create_info.depthWriteEnable = VK_TRUE;
-            pipeline_create_info_pack.depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_NEVER;
+            pipeline_create_info_pack.depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
 
             pipeline_create_info_pack.color_blend_attachment_states.push_back({ .colorWriteMask = 0b1111 });
             pipeline_create_info_pack.update_all_arrays();

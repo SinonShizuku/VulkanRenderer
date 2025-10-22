@@ -53,3 +53,7 @@ public:
         return load_file_internal(file_binaries, file_size, extent, format_info);
     }
 };
+
+using callback_copy_data_t = void(*)(const void* p_data, VkDeviceSize data_size);
+
+class

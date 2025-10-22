@@ -1,11 +1,17 @@
 cmake_minimum_required(VERSION 3.28)
 project(VulkanRenderer)
 
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+endif()
+
 set(CMAKE_CXX_STANDARD 23)
+
 
 # glfw & glm
 include_directories(Submodule/glfw/include)
 include_directories(Submodule/glm)
+include_directories(Submodule/stb/include)
 
 # Vulkan
 if(WIN32)
@@ -60,6 +66,11 @@ add_executable(VulkanRenderer main.cpp
         Demos/VulkanTests/OffScreenRenderingTest.h
         Demos/VulkanTests/DepthAttachmentTest.h
         Demos/VulkanTests/DeferredRenderingTest.h
+        Shader/ShaderLoader.h
+ "Shader/ShaderLoader.cpp")
+
+ target_compile_definitions(VulkanRenderer PRIVATE 
+    PROJECT_ROOT_PATH="${CMAKE_SOURCE_DIR}"
 )
 
 target_sources(VulkanRenderer PRIVATE
@@ -67,8 +78,11 @@ target_sources(VulkanRenderer PRIVATE
         ${IMGUI_BACKEND_SOURCES}
 )
 
+target_link_directories(VulkanRenderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Submodule/lib)
+
 if (WIN32)
-    target_link_libraries(VulkanRenderer ${CMAKE_CURRENT_SOURCE_DIR}/Submodule/glfw/lib-mingw-w64/libglfw3.a ${VULKAN_SDK_PATH}/Lib/vulkan-1.lib)
+    target_link_libraries(VulkanRenderer 
+                            ${CMAKE_CURRENT_SOURCE_DIR}/Submodule/glfw/lib-vc2022/glfw3.lib ${VULKAN_SDK_PATH}/Lib/vulkan-1.lib)
 else()
     # Linux/WSL specific linking
     target_link_libraries(VulkanRenderer glfw vulkan)

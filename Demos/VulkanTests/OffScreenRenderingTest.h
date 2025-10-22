@@ -162,8 +162,8 @@ private:
     }
 
     bool create_pipeline_offscreen() {
-        static VulkanShaderModule vert_offscreen("../Shader/Line.vert.spv");
-        static VulkanShaderModule frag_offscreen("../Shader/Line.frag.spv");
+        static VulkanShaderModule vert_offscreen(get_shader_path("Line.vert.spv").string().c_str());
+        static VulkanShaderModule frag_offscreen(get_shader_path("Line.frag.spv").string().c_str());
         VkPipelineShaderStageCreateInfo shader_stage_create_info[2] = {
             vert_offscreen.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),
             frag_offscreen.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -184,8 +184,8 @@ private:
     }
 
     bool create_pipeline() {
-        static VulkanShaderModule vert("../Shader/CanvasToScreen.vert.spv");
-        static VulkanShaderModule frag("../Shader/CanvasToScreen.frag.spv");
+        static VulkanShaderModule vert("Shader/CanvasToScreen.vert.spv");
+        static VulkanShaderModule frag("Shader/CanvasToScreen.frag.spv");
         static VkPipelineShaderStageCreateInfo shader_stage_create_infos_screen[2] = {
             vert.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),
             frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)

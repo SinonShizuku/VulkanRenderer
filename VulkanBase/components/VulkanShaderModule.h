@@ -1,6 +1,7 @@
 #pragma once
 #include "../../Start.h"
 #include "../VulkanCore.h"
+#include "../../Shader/ShaderLoader.h"
 
 class VulkanShaderModule {
     VkShaderModule handle = VK_NULL_HANDLE;
@@ -67,4 +68,9 @@ public:
         return create(create_info);
     }
 };
+
+inline VulkanShaderModule create_shader_module_from_glsl(f_compile_glsl_to_spv &f_compile, const char* filepath, const char* entry = "main") {
+    auto code = f_compile(filepath, entry);
+    return VulkanShaderModule(code.size(), code.data());
+}
 
