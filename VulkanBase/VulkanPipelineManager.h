@@ -354,8 +354,10 @@ public:
         rpwf_offscreen.framebuffer.clear();
     }
 
-    const auto& create_rpwf_ds(VkFormat depth_stencil_format = VK_FORMAT_D24_UNORM_S8_UINT) {
-        _depth_stencil_format = depth_stencil_format;
+    const auto& create_rpwf_ds() {
+        _depth_stencil_format = VulkanCore::get_singleton().get_vulkan_device().get_supported_depth_format();
+
+        // _depth_stencil_format = depth_stencil_format;
         VkAttachmentDescription attachment_description[2] = {
             {
                 .format = VulkanSwapchainManager::get_singleton().get_swapchain_create_info().imageFormat,
@@ -367,7 +369,7 @@ public:
                 .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
             },
             {
-                .format = depth_stencil_format,
+                .format = _depth_stencil_format,
                 .samples = VK_SAMPLE_COUNT_1_BIT,
                 .loadOp = _depth_stencil_format != VK_FORMAT_S8_UINT ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                 .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -405,45 +407,14 @@ public:
             .pDependencies = &subpass_dependency,
         };
 
-        // ==========================================================
-        // [ DEBUG BLOCK START ]
-        // ==========================================================
-        static bool render_pass_debug_printed = false;
-        if (!render_pass_debug_printed) {
-            std::cout << std::endl << "--- RenderPass Creation Debug (create_rpwf_ds) ---" << std::endl;
 
-            // 1. 检查 subpass 0 的 pDepthStencilAttachment 指针
-            if (render_pass_create_info.pSubpasses[0].pDepthStencilAttachment != nullptr) {
-
-                std::cout << "[PASS] Subpass 0: pDepthStencilAttachment is NOT NULL." << std::endl;
-
-                // 2. 检查它指向的 attachment 索引
-                uint32_t depth_attachment_index = render_pass_create_info.pSubpasses[0].pDepthStencilAttachment->attachment;
-                std::cout << "  -> Points to Attachment Index: " << depth_attachment_index << std::endl;
-
-                if (depth_attachment_index == 1) {
-                    std::cout << "[PASS] Index 1 matches attachment_description[1] (Depth)." << std::endl;
-                } else {
-                    std::cout << "[FAIL] Index is " << depth_attachment_index << ", but expected 1!" << std::endl;
-                }
-
-            } else {
-                std::cout << "[FAIL] Subpass 0: pDepthStencilAttachment IS NULL." << std::endl;
-                std::cout << "  !!! THIS WOULD CAUSE THE BUG !!!" << std::endl;
-            }
-            std::cout << "----------------------------------------------------" << std::endl << std::endl;
-            render_pass_debug_printed = true;
-        }
-        // ==========================================================
-        // [ DEBUG BLOCK END ]
-        // ==========================================================
 
         rpwf_ds.render_pass.create(render_pass_create_info);
         auto create_framebuffers = [this] {
             dsas_screen_with_ds.resize(VulkanSwapchainManager::get_singleton().get_swapchain_image_count());
             rpwf_ds.framebuffers.resize(VulkanSwapchainManager::get_singleton().get_swapchain_image_count());
             for (auto&i : dsas_screen_with_ds)
-                i.create(_depth_stencil_format,window_size,1,VK_SAMPLE_COUNT_1_BIT,VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
+                i.create(_depth_stencil_format,window_size,1,VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
             VkFramebufferCreateInfo framebuffer_create_info = {
                 .renderPass = rpwf_ds.render_pass,
                 .attachmentCount = 2,
@@ -478,8 +449,8 @@ public:
         rpwf_ds.framebuffers.clear();
     }
 
-    const auto& create_rpwf_deferred_to_screen(VkFormat depth_stencil_format = VK_FORMAT_D24_UNORM_S8_UINT) {
-        _depth_stencil_format = depth_stencil_format;
+    const auto& create_rpwf_deferred_to_screen() {
+        _depth_stencil_format = VulkanCore::get_singleton().get_vulkan_device().get_supported_depth_format();
         VkAttachmentDescription attachment_description[4] = {
             {
                 .format = VulkanSwapchainManager::get_singleton().get_swapchain_create_info().imageFormat,

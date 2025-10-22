@@ -54,14 +54,6 @@ public:
         vertex_buffer_pervertex = std::make_unique<VulkanVertexBuffer>(sizeof(vertices));
         vertex_buffer_pervertex->transfer_data(vertices);
 
-        // glm::vec3 offsets[] = {
-        //     { -4, -4,  26 }, {  4, -4,  26 },
-        //     { -4,  4, 22 }, {  4,  4, 22 },
-        //     { -4, -4, 18 }, {  4, -4, 18 },
-        //     { -4,  4, 14 }, {  4,  4, 14 },
-        //     { -4, -4, 10 }, {  4, -4, 10 },
-        //     { -4,  4, 6 }, {  4,  4, 6 }
-        // };
         glm::vec3 offsets[] = {
             { -4, -4,  6 }, {  4, -4,  6 },
             { -4,  4, 10 }, {  4,  4, 10 },

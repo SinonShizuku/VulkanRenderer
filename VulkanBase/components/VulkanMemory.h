@@ -782,11 +782,11 @@ public:
         VkImageCreateInfo image_create_info = {
             .imageType = VK_IMAGE_TYPE_2D,
             .format = format,
-            .extent = {extent.height, extent.width, 1},
+            .extent = {extent.width, extent.height, 1},
             .mipLevels = 1,
             .arrayLayers = layer_count,
             .samples = sample_count,
-            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | other_usages,
+            .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | other_usages,
         };
         image_memory.create(image_create_info,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | bool(other_usages & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT) * VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);

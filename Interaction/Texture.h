@@ -56,4 +56,4 @@ public:
 
 using callback_copy_data_t = void(*)(const void* p_data, VkDeviceSize data_size);
 
-class
+
