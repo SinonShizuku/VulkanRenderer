@@ -9,9 +9,10 @@ set(CMAKE_CXX_STANDARD 23)
 
 
 # glfw & glm
-include_directories(Submodule/glfw/include)
-include_directories(Submodule/glm)
-include_directories(Submodule/stb/include)
+include_directories(External/glfw/include)
+include_directories(External/glm)
+include_directories(External/tinygltf/)
+
 
 # Vulkan
 if(WIN32)
@@ -21,7 +22,7 @@ if(WIN32)
 endif ()
 
 # imgui
-set(IMGUI_DIR "Submodule/imgui")
+set(IMGUI_DIR "External/imgui")
 include_directories(${IMGUI_DIR} ${IMGUI_DIR}/backends)
 file(GLOB IMGUI_CORE_SOURCES
         "${IMGUI_DIR}/*.cpp"
@@ -67,7 +68,9 @@ add_executable(VulkanRenderer main.cpp
         Demos/VulkanTests/DepthAttachmentTest.h
         Demos/VulkanTests/DeferredRenderingTest.h
         Shader/ShaderLoader.h
- "Shader/ShaderLoader.cpp")
+        Shader/ShaderLoader.cpp
+        Geometry/Model.h
+        Demos/BasicRendering/glTFLoading.h)
 
  target_compile_definitions(VulkanRenderer PRIVATE 
     PROJECT_ROOT_PATH="${CMAKE_SOURCE_DIR}"
@@ -78,11 +81,11 @@ target_sources(VulkanRenderer PRIVATE
         ${IMGUI_BACKEND_SOURCES}
 )
 
-target_link_directories(VulkanRenderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Submodule/lib)
+target_link_directories(VulkanRenderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/External/lib)
 
 if (WIN32)
     target_link_libraries(VulkanRenderer 
-                            ${CMAKE_CURRENT_SOURCE_DIR}/Submodule/glfw/lib-vc2022/glfw3.lib ${VULKAN_SDK_PATH}/Lib/vulkan-1.lib)
+                            ${CMAKE_CURRENT_SOURCE_DIR}/External/glfw/lib-vc2022/glfw3.lib ${VULKAN_SDK_PATH}/Lib/vulkan-1.lib)
 else()
     # Linux/WSL specific linking
     target_link_libraries(VulkanRenderer glfw vulkan)

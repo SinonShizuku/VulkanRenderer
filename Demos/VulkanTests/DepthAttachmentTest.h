@@ -21,35 +21,35 @@ public:
 
         vertex3D vertices[] = {
             //x+
-            { {  1,  1, -1 }, { 1, 0, 0, 1 } },
-            { {  1, -1, -1 }, { 1, 0, 0, 1 } },
-            { {  1,  1,  1 }, { 1, 0, 0, 1 } },
-            { {  1, -1,  1 }, { 1, 0, 0, 1 } },
+            { {  1,  1, -1 }, {0,0,0},{0,0},{ 1, 0, 0, 1 } },
+            { {  1, -1, -1 }, {0,0,0},{0,0},{ 1, 0, 0, 1 } },
+            { {  1,  1,  1 }, {0,0,0},{0,0},{ 1, 0, 0, 1 } },
+            { {  1, -1,  1 }, {0,0,0},{0,0},{ 1, 0, 0, 1 } },
             //x-
-            { { -1,  1,  1 }, { 0, 1, 1, 1 } },
-            { { -1, -1,  1 }, { 0, 1, 1, 1 } },
-            { { -1,  1, -1 }, { 0, 1, 1, 1 } },
-            { { -1, -1, -1 }, { 0, 1, 1, 1 } },
+            { { -1,  1,  1 }, {0,0,0},{0,0},{ 0, 1, 1, 1 } },
+            { { -1, -1,  1 }, {0,0,0},{0,0},{ 0, 1, 1, 1 } },
+            { { -1,  1, -1 }, {0,0,0},{0,0},{ 0, 1, 1, 1 } },
+            { { -1, -1, -1 }, {0,0,0},{0,0},{ 0, 1, 1, 1 } },
             //y+
-            { {  1,  1, -1 }, { 0, 1, 0, 1 } },
-            { {  1,  1,  1 }, { 0, 1, 0, 1 } },
-            { { -1,  1, -1 }, { 0, 1, 0, 1 } },
-            { { -1,  1,  1 }, { 0, 1, 0, 1 } },
+            { {  1,  1, -1 }, {0,0,0},{0,0},{ 0, 1, 0, 1 } },
+            { {  1,  1,  1 }, {0,0,0},{0,0},{ 0, 1, 0, 1 } },
+            { { -1,  1, -1 }, {0,0,0},{0,0},{ 0, 1, 0, 1 } },
+            { { -1,  1,  1 }, {0,0,0},{0,0},{ 0, 1, 0, 1 } },
             //y-
-            { {  1, -1, -1 }, { 1, 0, 1, 1 } },
-            { { -1, -1, -1 }, { 1, 0, 1, 1 } },
-            { {  1, -1,  1 }, { 1, 0, 1, 1 } },
-            { { -1, -1,  1 }, { 1, 0, 1, 1 } },
+            { {  1, -1, -1 }, {0,0,0},{0,0},{ 1, 0, 1, 1 } },
+            { { -1, -1, -1 }, {0,0,0},{0,0},{ 1, 0, 1, 1 } },
+            { {  1, -1,  1 }, {0,0,0},{0,0},{ 1, 0, 1, 1 } },
+            { { -1, -1,  1 }, {0,0,0},{0,0},{ 1, 0, 1, 1 } },
             //z+
-            { {  1,  1,  1 }, { 0, 0, 1, 1 } },
-            { {  1, -1,  1 }, { 0, 0, 1, 1 } },
-            { { -1,  1,  1 }, { 0, 0, 1, 1 } },
-            { { -1, -1,  1 }, { 0, 0, 1, 1 } },
+            { {  1,  1,  1 }, {0,0,0},{0,0},{ 0, 0, 1, 1 } },
+            { {  1, -1,  1 }, {0,0,0},{0,0},{ 0, 0, 1, 1 } },
+            { { -1,  1,  1 }, {0,0,0},{0,0},{ 0, 0, 1, 1 } },
+            { { -1, -1,  1 }, {0,0,0},{0,0},{ 0, 0, 1, 1 } },
             //z-
-            { { -1,  1, -1 }, { 1, 1, 0, 1 } },
-            { { -1, -1, -1 }, { 1, 1, 0, 1 } },
-            { {  1,  1, -1 }, { 1, 1, 0, 1 } },
-            { {  1, -1, -1 }, { 1, 1, 0, 1 } }
+            { { -1,  1, -1 }, {0,0,0},{0,0},{ 1, 1, 0, 1 } },
+            { { -1, -1, -1 }, {0,0,0},{0,0},{ 1, 1, 0, 1 } },
+            { {  1,  1, -1 }, {0,0,0},{0,0},{ 1, 1, 0, 1 } },
+            { {  1, -1, -1 }, {0,0,0},{0,0},{ 1, 1, 0, 1 } }
         };
         vertex_buffer_pervertex = std::make_unique<VulkanVertexBuffer>(sizeof(vertices));
         vertex_buffer_pervertex->transfer_data(vertices);
@@ -95,7 +95,7 @@ public:
         // Use a conventional perspective projection without flipping Y axis
         glm::mat4 proj = flip_vertical(glm::infinitePerspectiveLH_ZO(glm::radians(60.f), float(window_size.width) / window_size.height, 5.f));
         VkClearValue clear_values[2] = {
-            {.color = { 1.f, 1.f, 1.f, 1.f }},
+            {.color = { 0.f, 0.f, 0.f, 1.f }},
             {.depthStencil = { 1.f, 0 }}
         };
 
@@ -141,8 +141,8 @@ private:
         // static VulkanShaderModule vert("Shader/Into3D.vert.spv");
         // static VulkanShaderModule frag("Shader/Into3d_visualizeDepth.frag.spv");
         f_compile_glsl_to_spv f_compile;
-        static VulkanShaderModule vert = create_shader_module_from_glsl(f_compile, get_shader_path("Into3D.vert.shader").string().c_str());
-        static VulkanShaderModule frag = create_shader_module_from_glsl(f_compile, get_shader_path("Into3D.frag.shader").string().c_str());;
+        static VulkanShaderModule vert = create_shader_module_from_glsl(f_compile, get_shader_path("VulkanTests/Into3D.vert.shader").string().c_str());
+        static VulkanShaderModule frag = create_shader_module_from_glsl(f_compile, get_shader_path("VulkanTests/Into3D.frag.shader").string().c_str());;
         static VkPipelineShaderStageCreateInfo shader_stage_create_infos[2] = {
             vert.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),
             frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)

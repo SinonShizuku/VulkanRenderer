@@ -15,6 +15,7 @@
 #include "VulkanTests/OffScreenRenderingTest.h"
 #include "VulkanTests/DepthAttachmentTest.h"
 #include "VulkanTests/DeferredRenderingTest.h"
+#include "BasicRendering/glTFLoading.h"
 
 class DemoManager {
 public:
@@ -48,6 +49,10 @@ public:
 
         implemented_demos["DeferredRenderingTest"] = []() {
             return std::make_unique<DeferredRenderingTest>();;
+        };
+
+        implemented_demos["Loading & Rendering glTF Model"] = []() {
+            return std::make_unique<glTFLoading>();;
         };
 
     }

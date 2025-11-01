@@ -26,6 +26,8 @@ struct push_constant_data_3 {
 
 struct vertex3D {
     glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 uv;
     glm::vec4 color;
 };
 
@@ -35,9 +37,3 @@ struct vertex3D_1 {
     glm::vec4 albedo_specular;
 };
 
-// func
-inline glm::mat4 flip_vertical(const glm::mat4& projection) {
-    glm::mat4 _projection = projection;
-    _projection[1][1] *= -1;
-    return _projection;
-}

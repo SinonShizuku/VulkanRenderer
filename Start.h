@@ -193,3 +193,9 @@ static void** set_pnext(void*& pbegin, void* pnext, bool allow_duplicate = false
 
     return set_p_next_internal(pbegin, pnext, allow_duplicate);
 }
+
+inline glm::mat4 flip_vertical(const glm::mat4& projection) {
+    glm::mat4 _projection = projection;
+    _projection[1][1] *= -1;
+    return _projection;
+}

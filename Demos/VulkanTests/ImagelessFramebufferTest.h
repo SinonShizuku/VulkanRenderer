@@ -31,8 +31,9 @@ public:
         vertex_buffer = std::make_unique<VulkanVertexBuffer>(sizeof(vertices));
         vertex_buffer->transfer_data(vertices);
 
+        auto page_image_root = G_PROJECT_ROOT / "Assets/pages/ImagelessFramebuffer.png";
         texture_image = std::make_unique<VulkanTexture2D>(
-            "../Assets/ImagelessFramebuffer.png",
+            page_image_root.string().c_str(),
             VK_FORMAT_R8G8B8A8_UNORM,
             VK_FORMAT_R8G8B8A8_UNORM,
             true
@@ -135,8 +136,8 @@ private:
     }
 
     bool create_pipeline() {
-        static VulkanShaderModule vert(get_shader_path("Texture.vert.spv").string().c_str());
-        static VulkanShaderModule frag(get_shader_path("Texture.frag.spv").string().c_str());
+        static VulkanShaderModule vert(get_shader_path("VulkanTests/Texture.vert.spv").string().c_str());
+        static VulkanShaderModule frag(get_shader_path("VulkanTests/Texture.frag.spv").string().c_str());
         // static VkPipelineShaderStageCreateInfo shader_stage_create_infos_triangle[2] = {
         //     vert.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),
         //     frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)
