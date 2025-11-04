@@ -1,5 +1,5 @@
 #pragma once
-#include "../DemoBase.h"
+#include "../DemoBase3D.h"
 #include "../../Geometry/Vertex.h"
 #include "../../Geometry/Model.h"
 
@@ -7,10 +7,10 @@
 #include "../../VulkanBase/components/VulkanSampler.h"
 #include "../../VulkanBase/components/VulkanMemory.h"
 
-class glTFLoading : public DemoBase {
+class glTFLoading : public DemoBase3D {
 public:
-    glTFLoading()
-    : DemoBase("glTFLoading", DemoCategoryType::BASIC_RENDERING, "")
+    glTFLoading(GLFWwindow *window)
+    : DemoBase3D("glTFLoading", DemoCategoryType::BASIC_RENDERING, "",  window)
     {}
     ~glTFLoading() override = default;
 
@@ -21,6 +21,9 @@ public:
         VkSamplerCreateInfo sampler_create_info = VulkanTexture2D::get_sampler_create_info();
         sampler = std::make_unique<VulkanSampler>(sampler_create_info);
 
+        initialize_camera();
+        register_glfw_callback();
+
         if (!create_descriptor_resources() ||
             !create_pipeline_layout() ||
             !create_pipeline()) {
@@ -30,7 +33,7 @@ public:
         return true;
     }
 
-    void   cleanup_scene_resources() override {
+    void cleanup_scene_resources() override {
         // SharedResourceManager::get_singleton().get_shared_fence().wait_and_reset();
         // 清理资源
         descriptor_set.reset();
@@ -42,10 +45,15 @@ public:
         pipeline_layout.~VulkanPipelineLayout();
         descriptor_set_layout.~VulkanDescriptorSetLayout();
 
+        // 清理回调
+        clean_up_glfw_callback();
+
         free_command_buffer();
     }
 
     void render_frame() override {
+        update_uniform_data();
+        uniform_buffer->transfer_data(uniform_data);
         const auto& [render_pass, framebuffers] = VulkanPipelineManager::get_singleton().get_rpwf_ds();
         auto current_image_index = VulkanSwapchainManager::get_singleton().get_current_image_index();
 
@@ -76,7 +84,6 @@ public:
 
 private:
     bool wireframe = false;
-    std::unique_ptr<VulkanTexture2D> texture_image;
     std::unique_ptr<VulkanSampler> sampler;
     std::unique_ptr<VulkanDescriptorPool> descriptor_pool;
     std::unique_ptr<VulkanDescriptorSet> descriptor_set;
@@ -92,12 +99,12 @@ private:
 
     VulkanglTFModel gltf_model;
 
-    struct UniformData {
-        glm::mat4 projection = flip_vertical(glm::perspective(glm::radians(60.0f), (float)window_size.width / (float)window_size.height, 0.1f, 256.0f));
-        glm::mat4 model;
-        glm::vec4 light_pos = glm::vec4(5.0f, 5.0f, -5.0f, 1.0f);
-        glm::vec4 view_pos;
-    } uniform_data;
+    // struct UniformData {
+    //     glm::mat4 projection = flip_vertical(glm::perspective(glm::radians(60.0f), (float)window_size.width / (float)window_size.height, 0.1f, 256.0f));
+    //     glm::mat4 model;
+    //     glm::vec4 light_pos = glm::vec4(5.0f, 5.0f, -5.0f, 1.0f);
+    //     glm::vec4 view_pos;
+    // } uniform_data;
 
 
     bool create_pipeline_layout() {
@@ -189,13 +196,13 @@ private:
         };
         descriptor_set_layouts.textures.create(descriptor_set_layout_create_info);
 
-        glm::mat4 transM = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.1f, -1.0f));
-        glm::mat4 rotM = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        uniform_data.model = transM * rotM;
-        uniform_data.view_pos = glm::vec4(0.0f, -0.1f, 1.0f, 0.0f);
+        // glm::mat4 transM = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.1f, -1.0f));
+        // glm::mat4 rotM = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        // uniform_data.model = transM * rotM;
+        // uniform_data.view_pos = glm::vec4(0.0f, -0.1f, 1.0f, 0.0f);
 
         uniform_buffer = std::make_unique<VulkanUniformBuffer>(sizeof(uniform_data));
-        uniform_buffer->transfer_data(uniform_data);
+        // uniform_buffer->transfer_data(uniform_data);
 
         VkDescriptorBufferInfo buffer_info = {*uniform_buffer, 0, VK_WHOLE_SIZE};
         // 创建描述符池

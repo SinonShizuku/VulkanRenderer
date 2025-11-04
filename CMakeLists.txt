@@ -70,7 +70,9 @@ add_executable(VulkanRenderer main.cpp
         Shader/ShaderLoader.h
         Shader/ShaderLoader.cpp
         Geometry/Model.h
-        Demos/BasicRendering/glTFLoading.h)
+        Demos/BasicRendering/glTFLoading.h
+        Interaction/Camera.h
+        Demos/DemoBase3D.h)
 
  target_compile_definitions(VulkanRenderer PRIVATE 
     PROJECT_ROOT_PATH="${CMAKE_SOURCE_DIR}"

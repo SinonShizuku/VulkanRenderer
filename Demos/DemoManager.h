@@ -51,8 +51,8 @@ public:
             return std::make_unique<DeferredRenderingTest>();;
         };
 
-        implemented_demos["Loading & Rendering glTF Model"] = []() {
-            return std::make_unique<glTFLoading>();;
+        implemented_demos["Loading & Rendering glTF Model"] = [this]() {
+            return std::make_unique<glTFLoading>(window);
         };
 
     }
