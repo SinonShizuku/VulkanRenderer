@@ -49,6 +49,18 @@ public:
         }
     }
 
+    void update(float frame_timer_from_manager) override {
+        this->frame_timer = frame_timer_from_manager;
+        if (!paused)
+        {
+            timer += timer_speed * this->frame_timer;
+            if (timer > 1.0)
+            {
+                timer -= 1.0f;
+            }
+        }
+    }
+
 protected:
     Camera camera;
     GLFWmousebuttonfun prev_mouse_button_callback = nullptr;
@@ -58,25 +70,17 @@ protected:
         glm::vec2 mouse_pos;
     } input_state;
 
+    float frame_timer = 0.0f; // 存储本帧的增量时间
+    float timer = 0.0f;       // 0-1 循环的动画计时器
+    float timer_speed = 0.25f;
+    bool paused = false;
+
     struct UniformData {
         glm::mat4 projection = flip_vertical(glm::perspective(glm::radians(60.0f), (float)window_size.width / (float)window_size.height, 0.1f, 256.0f));
         glm::mat4 model;
         glm::vec4 light_pos = glm::vec4(5.0f, 5.0f, -5.0f, 1.0f);
         glm::vec4 view_pos;
     } uniform_data;
-
-    void update_uniform_data() {
-        uniform_data.projection = camera.matrices.perspective;
-        uniform_data.model = camera.matrices.view;
-        uniform_data.view_pos = camera.view_pos;
-    }
-
-    void initialize_camera() {
-        camera.flip_y = true;
-        camera.set_perspective(60.0f, (float)window_size.width / (float)window_size.height, 0.1f, 256.0f);
-        camera.set_rotation({ 45.0f, 0.0f, 0.0f });
-        camera.set_position({ 0.0f, -0.1f, -1.0f });
-    }
 
     void register_glfw_callback() {
         glfwSetWindowUserPointer(window, this);

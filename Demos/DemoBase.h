@@ -39,6 +39,8 @@ public:
     const std::string& get_description() const { return scene_description; }
     VkCommandBuffer get_command_buffer() const { return command_buffer; }
 
+    virtual void update(float frame_timer_from_manager){}
+
     // Setter
     void set_window(GLFWwindow *window) { this->window = window; }
 

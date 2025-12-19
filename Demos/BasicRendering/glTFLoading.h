@@ -89,7 +89,7 @@ private:
     std::unique_ptr<VulkanDescriptorSet> descriptor_set;
     struct DescriptorSetLayouts {
         VulkanDescriptorSetLayout matrices;
-        VulkanDescriptorSetLayout textures;;
+        VulkanDescriptorSetLayout textures;
     } descriptor_set_layouts;
     std::unique_ptr<VulkanUniformBuffer> uniform_buffer;
 
@@ -105,6 +105,12 @@ private:
     //     glm::vec4 light_pos = glm::vec4(5.0f, 5.0f, -5.0f, 1.0f);
     //     glm::vec4 view_pos;
     // } uniform_data;
+
+    void update_uniform_data() {
+        uniform_data.projection = camera.matrices.perspective;
+        uniform_data.model = camera.matrices.view;
+        uniform_data.view_pos = camera.view_pos;
+    }
 
 
     bool create_pipeline_layout() {
@@ -124,8 +130,8 @@ private:
     }
 
     bool create_pipeline() {
-        static VulkanShaderModule vert(get_shader_path("BasicRendering/gltfLoading.vert.spv").string().c_str());
-        static VulkanShaderModule frag(get_shader_path("BasicRendering/gltfLoading.frag.spv").string().c_str());
+        static VulkanShaderModule vert(get_shader_path("BasicRendering/gltfLoading/gltfLoading.vert.spv").string().c_str());
+        static VulkanShaderModule frag(get_shader_path("BasicRendering/gltfLoading/gltfLoading.frag.spv").string().c_str());
         static VkPipelineShaderStageCreateInfo shader_stage_create_infos_texture[2] = {
             vert.stage_create_info(VK_SHADER_STAGE_VERTEX_BIT),
             frag.stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -304,5 +310,12 @@ private:
     void load_assets() {
         auto model_path = G_PROJECT_ROOT / "Assets/models/FlightHelmet/glTF/FlightHelmet.gltf";
         load_glTF_file(model_path.string());
+    }
+
+    void initialize_camera() {
+        camera.flip_y = true;
+        camera.set_perspective(60.0f, (float)window_size.width / (float)window_size.height, 0.1f, 256.0f);
+        camera.set_rotation({ 45.0f, 0.0f, 0.0f });
+        camera.set_position({ 0.0f, -0.1f, -1.0f });
     }
 };

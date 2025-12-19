@@ -796,7 +796,7 @@ public:
         image_view.create(image_memory.Image(),
             layer_count>1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D,
             format,
-            {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, layer_count}
+            {aspect_flags, 0, 1, 0, layer_count}
             );
     }
 

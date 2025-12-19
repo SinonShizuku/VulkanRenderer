@@ -16,6 +16,7 @@
 #include "VulkanTests/DepthAttachmentTest.h"
 #include "VulkanTests/DeferredRenderingTest.h"
 #include "BasicRendering/glTFLoading.h"
+#include "BasicRendering/ShadowMapping.h"
 
 class DemoManager {
 public:
@@ -53,6 +54,10 @@ public:
 
         implemented_demos["Loading & Rendering glTF Model"] = [this]() {
             return std::make_unique<glTFLoading>(window);
+        };
+
+        implemented_demos["ShadowMapping"] = [this]() {
+            return std::make_unique<ShadowMapping>(window);
         };
 
     }
@@ -152,9 +157,14 @@ public:
         auto& shared_resources = SharedResourceManager::get_singleton();
         bool show_demo_window = true;
 
+        double last_frame_time = glfwGetTime();
         while (!glfwWindowShouldClose(window)) {
             while (glfwGetWindowAttrib(window, GLFW_ICONIFIED))
                 glfwWaitEvents();
+
+            double current_time = glfwGetTime();
+            auto frame_timer = (float)(current_time - last_frame_time);
+            last_frame_time = current_time;
                 
             // 显示共享UI组件（菜单栏等）
             ImGuiManager::get_singleton().imgui_new_frame(show_demo_window);
@@ -167,6 +177,8 @@ public:
                 switch_to_demo(std::move(new_demo_request));
                 pending_demo_switch = false;
             }
+
+            current_demo->update(frame_timer);
 
             VulkanSwapchainManager::get_singleton().swap_image(
                 shared_resources.get_semaphore_image_is_available()
@@ -186,7 +198,7 @@ public:
             );
 
             glfwPollEvents();
-            update_fps_title();
+            update_fps_title(frame_timer);
 
             shared_resources.get_shared_fence().wait_and_reset();
         }
@@ -235,22 +247,24 @@ private:
         ImGui::DestroyContext();
     }
 
-    void update_fps_title() {
-        static double time0 = glfwGetTime();
-        static double time1;
-        static double dt;
-        static int dframe = -1;
+    void update_fps_title(float frame_timer) {
+        // 这些 static 变量现在只用于 FPS 计数
+        static double time_accumulator = 0.0;
+        static int frame_count = 0;
         static std::stringstream info;
-        time1 = glfwGetTime();
-        dframe++;
-        if ((dt = time1 - time0) >= 1) {
+
+        time_accumulator += frame_timer;
+        frame_count++;
+
+        if (time_accumulator >= 1.0) { // 每秒更新一次
             info.precision(1);
             info << "Vulkan Renderer - " << (current_demo ? current_demo->get_type() : "未选择场景")
-                 << "    " << std::fixed << dframe / dt << " FPS";
+                 << "    " << std::fixed << (double)frame_count / time_accumulator << " FPS";
             glfwSetWindowTitle(window, info.str().c_str());
+
             info.str("");
-            time0 = time1;
-            dframe = 0;
+            time_accumulator = 0.0; // 重置
+            frame_count = 0;
         }
     }
 };

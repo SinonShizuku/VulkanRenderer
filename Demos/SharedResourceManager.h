@@ -58,6 +58,7 @@ public:
         VulkanPipelineManager::get_singleton().create_rpwf_offscreen(window_size);
         VulkanPipelineManager::get_singleton().create_rpwf_ds();
         VulkanPipelineManager::get_singleton().create_rpwf_deferred_to_screen();
+        VulkanPipelineManager::get_singleton().create_rpwf_offscreen_ds();
     }
 
 private:

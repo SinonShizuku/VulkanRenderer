@@ -28,7 +28,8 @@ inline std::unordered_map<std::string,std::vector<DemoType>> demos = {
     {
         "Basic Rendering Examples",
         {
-            "Loading & Rendering glTF Model"
+            "Loading & Rendering glTF Model",
+            "ShadowMapping"
         }
     }
 

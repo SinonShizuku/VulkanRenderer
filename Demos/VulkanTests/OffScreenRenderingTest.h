@@ -72,9 +72,11 @@ public:
 
             // 离屏部分rpwf
             offscreen_render_pass.cmd_begin(command_buffer, offscreen_framebuffer, {{}, window_size});
-            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_line);
-            vkCmdPushConstants(command_buffer, pipeline_layout_line, VK_SHADER_STAGE_VERTEX_BIT, 0, 24, &push_constants_offscreen);
-            vkCmdDraw(command_buffer, 2, 1, 0, 0);
+            {
+                vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_line);
+                vkCmdPushConstants(command_buffer, pipeline_layout_line, VK_SHADER_STAGE_VERTEX_BIT, 0, 24, &push_constants_offscreen);
+                vkCmdDraw(command_buffer, 2, 1, 0, 0);
+            }
             offscreen_render_pass.cmd_end(command_buffer);
 
             // 屏幕部分rpwf
